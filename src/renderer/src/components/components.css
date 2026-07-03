@@ -1,0 +1,400 @@
+/* Component styles — all colors via theme variables, never raw hex. */
+
+/* Button */
+.il-btn {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0.62rem 1.05rem;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.05s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.il-btn:active {
+  transform: translateY(1px);
+}
+.il-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+.il-btn--primary {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.il-btn--primary:hover {
+  background: var(--accent-hover);
+}
+.il-btn--secondary {
+  background: transparent;
+  color: var(--text);
+  border-color: var(--border);
+}
+.il-btn--secondary:hover {
+  background: var(--surface-2);
+}
+.il-btn--ghost {
+  background: transparent;
+  color: var(--text-muted);
+}
+.il-btn--ghost:hover {
+  color: var(--text);
+  background: var(--surface-2);
+}
+.il-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Card */
+.il-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 1.15rem 1.25rem;
+}
+.il-card__title {
+  font-family: var(--font-heading);
+  font-size: 1.02rem;
+  margin: 0 0 0.15rem;
+  color: var(--text);
+}
+.il-card__meta {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* Badge */
+.il-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 0.22rem 0.55rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+}
+.il-badge--accent {
+  background: var(--accent-soft);
+  color: var(--accent-active);
+}
+.il-badge--neutral {
+  background: var(--surface-2);
+  color: var(--text-muted);
+}
+.il-badge--success {
+  background: color-mix(in srgb, var(--success) 18%, transparent);
+  color: var(--success);
+}
+.il-badge--warning {
+  background: color-mix(in srgb, var(--warning) 20%, transparent);
+  color: var(--warning);
+}
+
+/* Status dot */
+.il-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+  flex: none;
+}
+.il-dot--connected {
+  background: var(--success);
+}
+.il-dot--connecting {
+  background: var(--warning);
+}
+.il-dot--disconnected {
+  background: var(--text-muted);
+}
+.il-dot--error {
+  background: var(--danger);
+}
+
+/* Top bar */
+.il-topbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1.4rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  -webkit-app-region: drag; /* draggable frameless window */
+}
+.il-topbar__brand {
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+.il-topbar__logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  object-fit: cover;
+  box-shadow: var(--shadow-sm);
+}
+.il-topbar__spacer {
+  flex: 1;
+}
+.il-topbar__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  -webkit-app-region: no-drag;
+}
+.il-topbar__actions {
+  -webkit-app-region: no-drag;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+/* Modal */
+.il-modal__scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(21, 8, 3, 0.42);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  z-index: 50;
+}
+.il-modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  width: min(680px, 100%);
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+}
+.il-modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+.il-modal__title {
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  margin: 0;
+}
+.il-modal__body {
+  padding: 1.1rem 1.25rem;
+  overflow-y: auto;
+}
+.il-modal__foot {
+  padding: 0.85rem 1.25rem;
+  border-top: 1px solid var(--border);
+}
+.il-modal__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+/* Tabs */
+.il-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+.il-tab {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.4rem 0.8rem;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.il-tab--on {
+  background: var(--accent-soft);
+  color: var(--accent-active);
+}
+
+/* Markdown preview */
+.il-markdown {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.1rem;
+  margin: 0;
+  color: var(--text);
+}
+
+/* Form */
+.il-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+.il-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.il-field__label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.il-input {
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.6rem;
+  width: 100%;
+}
+.il-input:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+  border-color: var(--accent);
+}
+.il-input--area {
+  min-height: 74px;
+  resize: vertical;
+}
+.il-input--select {
+  flex: none;
+  width: auto;
+  min-width: 96px;
+}
+.il-input--sm {
+  flex: none;
+  width: 92px;
+}
+.il-row {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+  margin-bottom: 0.45rem;
+}
+.il-error {
+  color: var(--danger);
+  font-size: 0.8rem;
+  margin-right: auto;
+}
+
+/* Choice list (match modal) */
+.il-choices {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.il-choice {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+.il-choice:hover {
+  background: var(--surface-2);
+}
+.il-choice--on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.il-choice__name {
+  flex: 1;
+  font-weight: 600;
+  color: var(--text);
+}
+.il-choice__meta {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* Login screen */
+.il-login {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2rem;
+  background: var(--bg);
+}
+.il-login__card {
+  width: 100%;
+  max-width: 340px;
+  padding: 1.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 14px);
+  background: var(--surface);
+  box-shadow: var(--shadow, 0 8px 30px rgba(0, 0, 0, 0.12));
+}
+.il-login__title {
+  font-family: var(--font-head, inherit);
+  font-size: 1.5rem;
+  margin: 0;
+  color: var(--text);
+}
+.il-login__sub {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* Theme toggle */
+.il-toggle {
+  -webkit-app-region: no-drag;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+}
+.il-toggle:hover {
+  background: var(--surface-2);
+}
+.il-toggle:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}

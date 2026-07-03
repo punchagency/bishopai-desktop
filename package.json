@@ -1,0 +1,48 @@
+{
+  "name": "innerlume-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Innerlume desktop app — review dashboard + Bee courier (Electron)",
+  "main": "./out/main/index.js",
+  "author": "Bishop AI",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "icons": "node scripts/make-icons.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "package": "electron-vite build && electron-builder",
+    "package:dir": "electron-vite build && electron-builder --dir"
+  },
+  "dependencies": {
+    "@beeai/cli": "^0.7.3"
+  },
+  "build": {
+    "appId": "health.innerlume.desktop",
+    "productName": "Innerlume",
+    "directories": { "output": "release", "buildResources": "build" },
+    "files": ["out/**/*", "package.json", "innerlume.config.json"],
+    "asarUnpack": ["node_modules/@beeai/cli/**/*"],
+    "mac": {
+      "target": [{ "target": "dmg", "arch": ["universal"] }],
+      "category": "public.app-category.medical",
+      "icon": "build/icon.png"
+    },
+    "win": { "target": "nsis", "icon": "build/icon.png" },
+    "linux": { "target": "AppImage", "category": "Office", "icon": "build/icon.png" }
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3",
+    "electron-vite": "^2.3.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "sharp": "^0.33.0",
+    "typescript": "^5.5.0",
+    "vite": "^5.3.0"
+  }
+}
