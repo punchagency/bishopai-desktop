@@ -6,6 +6,7 @@ import type {
   LeadActivityItem,
   Overview,
   RefillDigest,
+  RefillSendResponse,
   ReviewKind,
   ReviewQueue,
   SessionNote,
@@ -236,10 +237,7 @@ export async function updateAuthSettings(
 }
 
 /** Bulk-send selected refills to Fullscript (dry-run until configured). */
-export function sendRefillOrders(
-  backendUrl: string,
-  refillIds: string[],
-): Promise<{ batch_id: string; sent: number; failed: number }> {
+export function sendRefillOrders(backendUrl: string, refillIds: string[]): Promise<RefillSendResponse> {
   return json(`${backendUrl}/refills/orders`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },

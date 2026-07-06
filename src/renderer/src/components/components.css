@@ -398,3 +398,110 @@
   outline: none;
   box-shadow: var(--ring);
 }
+
+/* Info popover — in-context explanations */
+.il-info {
+  position: relative;
+  display: inline-flex;
+  vertical-align: middle;
+}
+.il-info__trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.05rem;
+  height: 1.05rem;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-family: var(--font-heading);
+  font-size: 0.66rem;
+  font-style: italic;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+.il-info__trigger:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+.il-info__trigger:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+.il-info__panel {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  left: 0;
+  z-index: 30;
+  display: block;
+  width: max-content;
+  max-width: 22rem;
+  padding: 0.7rem 0.8rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  text-align: left;
+  white-space: normal;
+}
+.il-info__title {
+  display: block;
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--text);
+  margin-bottom: 0.3rem;
+}
+.il-info__body {
+  display: block;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+.il-info__body code {
+  font-size: 0.76rem;
+  background: var(--surface-2);
+  padding: 0.05rem 0.3rem;
+  border-radius: var(--radius-sm);
+}
+
+/* Refill send result banner */
+.il-refill-result {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0.75rem 0 0.25rem;
+  padding: 0.7rem 0.85rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  color: var(--text);
+}
+.il-refill-result__errors {
+  margin: 0.15rem 0 0;
+  padding-left: 1.1rem;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+.il-refill-result__dismiss {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+.il-card__note {
+  margin: 0.55rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.il-card__note a {
+  color: var(--accent);
+}

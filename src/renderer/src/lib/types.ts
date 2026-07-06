@@ -90,10 +90,28 @@ export interface RefillItem {
   dose: string | null;
   qty: number | null;
   tier: RefillTier;
+  /** Persisted Fullscript plan link from the last successful send, if any. */
+  fullscript_plan_id?: string | null;
+  invitation_url?: string | null;
 }
 export interface RefillDigest {
   fullscript_configured: boolean;
   refills: RefillItem[];
+}
+export interface RefillOrderResult {
+  refill_id: string | null;
+  client_name: string | null;
+  supplement_name: string | null;
+  ok: boolean;
+  error: string | null;
+  invitation_url: string | null;
+  fullscript_plan_id: string | null;
+}
+export interface RefillSendResponse {
+  batch_id: string;
+  sent: number;
+  failed: number;
+  results: RefillOrderResult[];
 }
 
 // WF2 checkout (server/src/routes/checkout.ts).

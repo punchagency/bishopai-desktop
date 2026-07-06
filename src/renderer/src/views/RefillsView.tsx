@@ -2,8 +2,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { Card } from '../components/Card';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
+import { InfoPopover } from '../components/InfoPopover';
 import { fetchRefillDigest, sendRefillOrders, skipRefill, snoozeRefill } from '../lib/api';
-import type { RefillDigest, RefillItem, RefillTier } from '../lib/types';
+import type { RefillDigest, RefillItem, RefillTier, RefillSendResponse } from '../lib/types';
 
 // WF4: refill reminders timed off each supplement's run-out (projected nightly
 // from dose × qty × start date). Nicole's daily digest — snooze, skip, or
@@ -37,6 +38,7 @@ export function RefillsView({ backendUrl, onChanged }: { backendUrl: string; onC
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState<string | null>(null); // refill id being actioned
   const [sending, setSending] = useState(false);
+  const [result, setResult] = useState<RefillSendResponse | null>(null); // last send outcome
 
   const load = useCallback(
     (signal?: AbortSignal) => {
@@ -75,36 +77,65 @@ export function RefillsView({ backendUrl, onChanged }: { backendUrl: string; onC
     }
   };
 
-  const sendDue = async () => {
-    if (offline || !d) return;
-    const ids = d.refills.filter((r) => r.tier !== 'coming' && r.status === 'pending').map((r) => r.id);
-    if (ids.length === 0) return;
+  // Send a set of refills and surface the per-line outcome (created plans,
+  // invitation links, and any failures like a missing email or no product match).
+  const send = async (ids: string[]) => {
+    if (offline || ids.length === 0) return;
     setSending(true);
     try {
-      await sendRefillOrders(backendUrl, ids);
+      const res = await sendRefillOrders(backendUrl, ids);
+      setResult(res);
       await load();
       onChanged?.();
     } catch {
-      /* surfaced on next load */
+      setResult(null); // surfaced on next load
     } finally {
       setSending(false);
     }
+  };
+
+  const sendDue = () => {
+    if (!d) return;
+    send(d.refills.filter((r) => r.tier !== 'coming' && r.status === 'pending').map((r) => r.id));
   };
 
   if (loading && !digest) return <p className="il-empty">Loading refill digest…</p>;
 
   const d = digest ?? SAMPLE;
   const dueCount = d.refills.filter((r) => r.tier !== 'coming' && r.status === 'pending').length;
+  // Index the last send outcome by refill id so each card can show its result.
+  const outcomeByRefill = new Map((result?.results ?? []).map((r) => [r.refill_id ?? '', r]));
 
   return (
     <section className="il-view">
       <div className="il-view__head">
         <div>
-          <h1 className="il-view__title">Refills</h1>
+          <h1 className="il-view__title">
+            Refills{' '}
+            <InfoPopover label="How refills reach Fullscript" title="How this works">
+              Each supplement's run-out date is projected nightly from its dose, quantity, and start
+              date. Sending creates a <strong>draft treatment plan</strong> per client in Fullscript
+              (one recommendation per supplement, with the dose carried over). The client gets an
+              invitation link to review and purchase — nothing is charged here.
+            </InfoPopover>
+          </h1>
           <p className="il-view__sub">
-            {d.refills.length} client{d.refills.length === 1 ? '' : 's'} to review
+            {d.refills.length} client{d.refills.length === 1 ? '' : 's'} to review{' '}
+            <InfoPopover label="What do the tiers mean?" title="Timing tiers">
+              <strong>Overdue</strong> — the supply has run out. <strong>Soon</strong> — running low
+              (within ~2 weeks). <strong>Coming</strong> — plenty left; shown for context, not yet due.
+            </InfoPopover>
             {offline && <Badge tone="warning">&nbsp;offline preview&nbsp;</Badge>}
-            {!offline && !d.fullscript_configured && <Badge tone="neutral">&nbsp;Fullscript dry-run&nbsp;</Badge>}
+            {!offline && !d.fullscript_configured && (
+              <>
+                <Badge tone="neutral">&nbsp;Fullscript dry-run&nbsp;</Badge>{' '}
+                <InfoPopover label="What is dry-run?" title="Dry-run mode">
+                  Fullscript isn't connected yet, so “Send” runs the full flow but doesn't create real
+                  plans — it's safe to try. Add the Fullscript credentials to go live; nothing else
+                  changes.
+                </InfoPopover>
+              </>
+            )}
           </p>
         </div>
         <Button variant="primary" disabled={offline || sending || dueCount === 0} onClick={sendDue}>
@@ -112,31 +143,72 @@ export function RefillsView({ backendUrl, onChanged }: { backendUrl: string; onC
         </Button>
       </div>
 
+      {result && (
+        <div className="il-refill-result">
+          <span>
+            <strong>{result.sent}</strong> plan{result.sent === 1 ? '' : 's'} created
+            {result.failed > 0 && <>, <strong className="il-error">{result.failed} failed</strong></>}
+            {!d.fullscript_configured && ' (dry-run)'}
+          </span>
+          {result.results.filter((r) => !r.ok).length > 0 && (
+            <ul className="il-refill-result__errors">
+              {result.results
+                .filter((r) => !r.ok)
+                .map((r, i) => (
+                  <li key={i}>
+                    {r.client_name ?? 'A client'}
+                    {r.supplement_name ? ` · ${r.supplement_name}` : ''} — {r.error}
+                  </li>
+                ))}
+            </ul>
+          )}
+          <button type="button" className="il-refill-result__dismiss" onClick={() => setResult(null)}>
+            Dismiss
+          </button>
+        </div>
+      )}
+
       <div className="il-grid">
-        {d.refills.map((r) => (
-          <Card
-            key={r.id}
-            title={r.client_name ?? 'Unknown client'}
-            meta={r.supplement_name ?? 'supplement'}
-            actions={<Badge tone={TONE[r.tier]}>{daysLabel(r.days_left)}</Badge>}
-          >
-            <div className="il-card__row">
-              <Button variant="ghost" disabled={pending === r.id} onClick={() => act(r.id, () => skipRefill(backendUrl, r.id))}>
-                Skip
-              </Button>
-              <Button variant="secondary" disabled={pending === r.id} onClick={() => act(r.id, () => snoozeRefill(backendUrl, r.id))}>
-                Snooze
-              </Button>
-              <Button
-                variant="primary"
-                disabled={pending === r.id || r.status !== 'pending'}
-                onClick={() => act(r.id, () => sendRefillOrders(backendUrl, [r.id]))}
-              >
-                {r.status === 'notified' ? 'Sent' : 'Send'}
-              </Button>
-            </div>
-          </Card>
-        ))}
+        {d.refills.map((r) => {
+          const outcome = outcomeByRefill.get(r.id);
+          return (
+            <Card
+              key={r.id}
+              title={r.client_name ?? 'Unknown client'}
+              meta={r.supplement_name ?? 'supplement'}
+              actions={<Badge tone={TONE[r.tier]}>{daysLabel(r.days_left)}</Badge>}
+            >
+              <div className="il-card__row">
+                <Button variant="ghost" disabled={pending === r.id} onClick={() => act(r.id, () => skipRefill(backendUrl, r.id))}>
+                  Skip
+                </Button>
+                <Button variant="secondary" disabled={pending === r.id} onClick={() => act(r.id, () => snoozeRefill(backendUrl, r.id))}>
+                  Snooze
+                </Button>
+                <Button
+                  variant="primary"
+                  disabled={sending || r.status !== 'pending'}
+                  onClick={() => send([r.id])}
+                >
+                  {r.status === 'notified' ? 'Sent' : 'Send'}
+                </Button>
+              </div>
+              {outcome && !outcome.ok ? (
+                <p className="il-card__note il-error">Couldn’t send — {outcome.error}</p>
+              ) : (
+                // Fresh send link, or the one persisted from a previous send.
+                (outcome?.invitation_url ?? r.invitation_url) && (
+                  <p className="il-card__note">
+                    Plan created ·{' '}
+                    <a href={(outcome?.invitation_url ?? r.invitation_url)!} target="_blank" rel="noreferrer">
+                      open in Fullscript
+                    </a>
+                  </p>
+                )
+              )}
+            </Card>
+          );
+        })}
       </div>
 
       {d.refills.length === 0 && <p className="il-empty">No refills due right now. 🌿</p>}
