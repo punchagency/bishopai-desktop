@@ -299,6 +299,74 @@
   flex: none;
   width: 92px;
 }
+/* WF2 client → QuickBooks customer mapping (Settings panel). */
+.il-maplist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  max-height: 340px;
+  overflow-y: auto;
+}
+.il-maprow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-top: 1px solid var(--border, rgba(0, 0, 0, 0.08));
+}
+.il-maprow:first-child {
+  border-top: none;
+}
+.il-maprow__who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.il-maprow__name {
+  font-weight: 600;
+}
+.il-maprow__email {
+  font-size: 0.82em;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.il-maprow__act {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+/* Space a standalone card within a view (Settings cards, the checkout
+   reconciliation panel that sits above the grid). */
+.il-view > .il-card {
+  margin-bottom: 14px;
+}
+.il-view > .il-card + .il-card {
+  margin-top: 14px;
+}
+
+/* WF2 card-capture form on the checkout approve action. */
+.il-cardform {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+.il-cardform__row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.il-cardform .il-input {
+  width: 100%;
+}
+.il-cardform__row .il-input--sm {
+  width: 92px;
+}
 .il-row {
   display: flex;
   gap: 0.45rem;

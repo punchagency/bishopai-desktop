@@ -2,6 +2,9 @@ import type {
   AuthStatus,
   CandidateAppointment,
   CheckoutData,
+  CustomerMapData,
+  CustomerSyncReport,
+  ReconciliationData,
   EngagementData,
   LeadActivityItem,
   Overview,
@@ -144,15 +147,27 @@ export function fetchCheckouts(backendUrl: string, signal?: AbortSignal): Promis
   return json<CheckoutData>(`${backendUrl}/checkout`, { signal });
 }
 
-/** Approve a checkout → charge (dry-run until QB) → docs → PB mark. */
+/** Card details for a live charge (Option A — the backend tokenizes; the PAN is
+ *  never stored client- or server-side beyond the tokenization call). */
+export interface CardInput {
+  number: string;
+  expMonth: string;
+  expYear: string;
+  cvc: string;
+  name?: string;
+}
+
+/** Approve a checkout → charge (dry-run until QB) → docs → PB mark. Pass a card
+ *  when QuickBooks is live; omit it in dry-run. */
 export function approveCheckout(
   backendUrl: string,
   id: string,
+  card?: CardInput,
 ): Promise<{ status: string; qbTxnId?: string; error?: string }> {
   return json(`${backendUrl}/checkout/${id}/approve`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: '{}',
+    body: JSON.stringify(card ? { card } : {}),
   });
 }
 
@@ -163,6 +178,60 @@ export function closeCheckout(backendUrl: string, id: string): Promise<{ status:
     headers: { 'content-type': 'application/json' },
     body: '{}',
   });
+}
+
+// --- WF2 payment reconciliation ----------------------------------------------
+
+/** Reconciliation ledger; pass a status (e.g. NEEDS_REVIEW) to filter. */
+export function fetchReconciliations(backendUrl: string, status?: string): Promise<ReconciliationData> {
+  const q = status ? `?status=${encodeURIComponent(status)}` : '';
+  return json<ReconciliationData>(`${backendUrl}/checkout/reconciliations${q}`);
+}
+
+/** Re-drive a FAILED / NEEDS_REVIEW reconciliation now (idempotent). */
+export function retryReconciliation(
+  backendUrl: string,
+  id: string,
+): Promise<{ status: string; last_error: string | null; accounting_payment_id: string | null }> {
+  return json(`${backendUrl}/checkout/reconciliations/${id}/retry`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: '{}',
+  });
+}
+
+// --- client → QuickBooks customer mapping ------------------------------------
+
+/** All clients with their current QBO customer mapping (unmapped first). */
+export function fetchCustomerMap(backendUrl: string): Promise<CustomerMapData> {
+  return json<CustomerMapData>(`${backendUrl}/checkout/customer-map`);
+}
+
+/** Pull QBO customers and auto-map unambiguous exact matches; returns a report. */
+export function syncCustomerMap(backendUrl: string): Promise<CustomerSyncReport> {
+  return json<CustomerSyncReport>(`${backendUrl}/checkout/customer-map/sync`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: '{}',
+  });
+}
+
+/** Manually set/override a client's QBO customer id. */
+export function setCustomerMap(
+  backendUrl: string,
+  clientId: string,
+  qboCustomerId: string,
+): Promise<{ client_id: string; qbo_customer_id: string }> {
+  return json(`${backendUrl}/checkout/customer-map/${clientId}`, {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ qbo_customer_id: qboCustomerId }),
+  });
+}
+
+/** Remove a client's mapping (to re-sync or fix it). */
+export function clearCustomerMap(backendUrl: string, clientId: string): Promise<{ ok: boolean }> {
+  return json(`${backendUrl}/checkout/customer-map/${clientId}`, { method: 'DELETE' });
 }
 
 // --- WF3 engagement ----------------------------------------------------------

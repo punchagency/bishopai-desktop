@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { Card } from '../components/Card';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
-import { approveCheckout, closeCheckout, fetchCheckouts } from '../lib/api';
+import { approveCheckout, closeCheckout, fetchCheckouts, type CardInput } from '../lib/api';
+import { ReconciliationPanel } from './ReconciliationPanel';
 import type { CheckoutData, CheckoutItem } from '../lib/types';
 
 // WF2 (§6): the one custom, auditable money flow. Two Nicole actions — approve
@@ -54,6 +55,14 @@ export function CheckoutView({ backendUrl, onChanged }: { backendUrl: string; on
   const [offline, setOffline] = useState(false);
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState<string | null>(null);
+  // Which checkout is entering a card, and the in-progress card fields. Cleared
+  // (never persisted) as soon as the charge is submitted.
+  const [cardFor, setCardFor] = useState<string | null>(null);
+  const [card, setCard] = useState<CardInput>({ number: '', expMonth: '', expYear: '', cvc: '', name: '' });
+  const resetCard = () => {
+    setCardFor(null);
+    setCard({ number: '', expMonth: '', expYear: '', cvc: '', name: '' });
+  };
 
   const load = useCallback(
     (signal?: AbortSignal) => {
@@ -110,6 +119,8 @@ export function CheckoutView({ backendUrl, onChanged }: { backendUrl: string; on
         </div>
       </div>
 
+      {!offline && <ReconciliationPanel backendUrl={backendUrl} onChanged={onChanged} />}
+
       <div className="il-grid">
         {d.checkouts.map((c) => {
           const total = c.summary_snapshot?.total_cents ?? 0;
@@ -129,11 +140,48 @@ export function CheckoutView({ backendUrl, onChanged }: { backendUrl: string; on
                 ))}
               </div>
               <div className="il-card__row">
-                {c.status === 'AWAITING_APPROVAL' && (
-                  <Button variant="primary" disabled={pending === c.id} onClick={() => act(c.id, () => approveCheckout(backendUrl, c.id))}>
-                    {pending === c.id ? 'Charging…' : `Approve ${money(total, ccy)}`}
-                  </Button>
-                )}
+                {c.status === 'AWAITING_APPROVAL' &&
+                  // Dry-run (no QuickBooks): one-click approve, no card needed.
+                  (!d.quickbooks_configured ? (
+                    <Button variant="primary" disabled={pending === c.id} onClick={() => act(c.id, () => approveCheckout(backendUrl, c.id))}>
+                      {pending === c.id ? 'Charging…' : `Approve ${money(total, ccy)}`}
+                    </Button>
+                  ) : cardFor !== c.id ? (
+                    // Live: reveal the card form before charging.
+                    <Button variant="primary" disabled={pending !== null} onClick={() => setCardFor(c.id)}>
+                      {`Approve ${money(total, ccy)}`}
+                    </Button>
+                  ) : (
+                    <form
+                      className="il-cardform"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        const payload: CardInput = { ...card, name: card.name?.trim() || undefined };
+                        void act(c.id, () => approveCheckout(backendUrl, c.id, payload)).then(resetCard);
+                      }}
+                    >
+                      <input
+                        className="il-input il-input--sm" placeholder="Card number" inputMode="numeric" autoComplete="off"
+                        value={card.number} onChange={(e) => setCard({ ...card, number: e.target.value.replace(/\D/g, '') })} required
+                      />
+                      <div className="il-cardform__row">
+                        <input className="il-input il-input--sm" placeholder="MM" inputMode="numeric" autoComplete="off" maxLength={2}
+                          value={card.expMonth} onChange={(e) => setCard({ ...card, expMonth: e.target.value.replace(/\D/g, '') })} required />
+                        <input className="il-input il-input--sm" placeholder="YYYY" inputMode="numeric" autoComplete="off" maxLength={4}
+                          value={card.expYear} onChange={(e) => setCard({ ...card, expYear: e.target.value.replace(/\D/g, '') })} required />
+                        <input className="il-input il-input--sm" placeholder="CVC" inputMode="numeric" autoComplete="off" maxLength={4}
+                          value={card.cvc} onChange={(e) => setCard({ ...card, cvc: e.target.value.replace(/\D/g, '') })} required />
+                      </div>
+                      <input className="il-input il-input--sm" placeholder="Name on card (optional)" autoComplete="off"
+                        value={card.name} onChange={(e) => setCard({ ...card, name: e.target.value })} />
+                      <div className="il-cardform__row">
+                        <Button variant="primary" type="submit" disabled={pending === c.id}>
+                          {pending === c.id ? 'Charging…' : `Charge ${money(total, ccy)}`}
+                        </Button>
+                        <Button variant="ghost" type="button" disabled={pending === c.id} onClick={resetCard}>Cancel</Button>
+                      </div>
+                    </form>
+                  ))}
                 {c.status === 'PB_MARKED' && (
                   <Button variant="primary" disabled={pending === c.id} onClick={() => act(c.id, () => closeCheckout(backendUrl, c.id))}>
                     {pending === c.id ? 'Closing…' : 'Confirm & close'}

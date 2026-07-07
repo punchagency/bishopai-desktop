@@ -140,6 +140,52 @@ export interface CheckoutData {
   checkouts: CheckoutItem[];
 }
 
+// client → QuickBooks customer mapping (server/src/routes/checkout.ts).
+export interface CustomerMapRow {
+  client_id: string;
+  client_name: string;
+  email: string | null;
+  qbo_customer_id: string | null;
+  updated_at: string | null;
+}
+export interface CustomerMapData {
+  quickbooks_configured: boolean;
+  clients: CustomerMapRow[];
+}
+// WF2 payment reconciliation ledger / dead-letter surface.
+export type ReconciliationStatus = 'PENDING' | 'RECORDING' | 'RECORDED' | 'FAILED' | 'NEEDS_REVIEW';
+export interface Reconciliation {
+  id: string;
+  checkout_id: string;
+  status: ReconciliationStatus;
+  amount_cents: number;
+  currency: string;
+  invoice_id: string | null;
+  customer_id: string | null;
+  provider_txn_id: string | null;
+  accounting_payment_id: string | null;
+  attempts: number;
+  last_error: string | null;
+  next_attempt_at: string;
+  updated_at: string;
+  client_name: string | null;
+}
+export interface ReconciliationData {
+  quickbooks_configured: boolean;
+  reconciliations: Reconciliation[];
+}
+
+export interface CustomerSyncReport {
+  ok: boolean;
+  error?: string;
+  customersScanned: number;
+  clientsScanned: number;
+  alreadyMapped: number;
+  mapped: { clientId: string; clientName: string; qboCustomerId: string; via: 'email' | 'name' }[];
+  ambiguous: { clientId: string; clientName: string; via: 'email' | 'name'; candidateIds: string[] }[];
+  unmatched: { clientId: string; clientName: string }[];
+}
+
 // WF3 engagement (server/src/routes/engagement.ts).
 export interface EngagementLead {
   id: string;

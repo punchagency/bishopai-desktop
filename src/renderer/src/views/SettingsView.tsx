@@ -3,6 +3,7 @@ import { Card } from '../components/Card';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { fetchAuthStatus, login, updateAuthSettings } from '../lib/api';
+import { CustomerMapCard } from './CustomerMapCard';
 import type { AuthStatus } from '../lib/types';
 
 // Settings — where Nicole controls the local dashboard login: turn it on/off and
@@ -120,6 +121,8 @@ export function SettingsView({
         </div>
         {needsPassword && <p className="il-view__sub">Set a password before turning login on.</p>}
       </Card>
+
+      <CustomerMapCard backendUrl={backendUrl} />
     </section>
   );
 }
