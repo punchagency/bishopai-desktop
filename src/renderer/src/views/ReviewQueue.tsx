@@ -3,6 +3,10 @@ import { Card } from '../components/Card';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { approveItem, fetchReviewQueue } from '../lib/api';
+import { humanize } from '../lib/format';
+import { SkeletonView } from '../components/Skeleton';
+import { EmptyState } from '../components/EmptyState';
+import { InfoPopover } from '../components/InfoPopover';
 import type { ReviewKind, ReviewQueue as Queue } from '../lib/types';
 import { ReviewDetail } from './ReviewDetail';
 
@@ -85,7 +89,7 @@ export function ReviewQueue({ backendUrl, onChanged }: { backendUrl: string; onC
     }
   };
 
-  if (loading && !queue) return <p className="il-empty">Loading review queue…</p>;
+  if (loading && !queue) return <SkeletonView cards={6} />;
 
   const q = queue ?? SAMPLE;
   const total = q.appointment_sheets.length + q.protocols.length;
@@ -94,7 +98,14 @@ export function ReviewQueue({ backendUrl, onChanged }: { backendUrl: string; onC
     <section className="il-view">
       <div className="il-view__head">
         <div>
-          <h1 className="il-view__title">Review Queue</h1>
+          <h1 className="il-view__title">
+            Review Queue{' '}
+            <InfoPopover label="What is the review queue?" title="How this works">
+              After each session, the conversation is turned into a draft Appointment Sheet and an
+              updated client Protocol. They wait here for you to read, edit, and approve — approving
+              writes the final documents to the client's Google Drive folder.
+            </InfoPopover>
+          </h1>
           <p className="il-view__sub">
             {total} item{total === 1 ? '' : 's'} awaiting your approval
             {offline && <Badge tone="warning">&nbsp;offline preview&nbsp;</Badge>}
@@ -108,7 +119,7 @@ export function ReviewQueue({ backendUrl, onChanged }: { backendUrl: string; onC
             key={s.id}
             title={s.client_name ?? 'Unknown client'}
             meta={`Appointment sheet · ${fmt(s.starts_at ?? s.updated_at)}`}
-            actions={<Badge tone="accent">{s.status}</Badge>}
+            actions={<Badge tone="accent">{humanize(s.status)}</Badge>}
           >
             <div className="il-card__row">
               <Button variant="ghost" onClick={() => setSelected({ kind: 'sheets', id: s.id, clientName: s.client_name ?? 'Unknown client' })}>
@@ -126,7 +137,7 @@ export function ReviewQueue({ backendUrl, onChanged }: { backendUrl: string; onC
             key={p.id}
             title={p.client_name ?? 'Unknown client'}
             meta={`Protocol · ${fmt(p.updated_at)}`}
-            actions={<Badge tone="neutral">{p.status}</Badge>}
+            actions={<Badge tone="neutral">{humanize(p.status)}</Badge>}
           >
             <div className="il-card__row">
               <Button variant="ghost" onClick={() => setSelected({ kind: 'protocols', id: p.id, clientName: p.client_name ?? 'Unknown client' })}>
@@ -140,7 +151,12 @@ export function ReviewQueue({ backendUrl, onChanged }: { backendUrl: string; onC
         ))}
       </div>
 
-      {total === 0 && <p className="il-empty">Nothing to review right now. 🌿</p>}
+      {total === 0 && (
+        <EmptyState title="You're all caught up">
+          New Appointment Sheets and Protocols land here after each session is captured and turned into
+          a draft note. There's nothing waiting on your review right now.
+        </EmptyState>
+      )}
 
       {selected && (
         <ReviewDetail

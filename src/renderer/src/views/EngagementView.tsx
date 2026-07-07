@@ -5,6 +5,10 @@ import { Button } from '../components/Button';
 import { StatCard } from '../components/StatCard';
 import { Feed, type FeedRow } from '../components/Feed';
 import { fetchEngagementActivity, fetchEngagementLeads, runCadence, stopLead } from '../lib/api';
+import { humanize } from '../lib/format';
+import { SkeletonView } from '../components/Skeleton';
+import { EmptyState } from '../components/EmptyState';
+import { InfoPopover } from '../components/InfoPopover';
 import type { EngagementData, EngagementLead, LeadActivityItem } from '../lib/types';
 
 // WF3: lead re-engagement + site activity. Leads show their next cadence step
@@ -97,7 +101,7 @@ export function EngagementView({ backendUrl, onChanged }: { backendUrl: string; 
     }
   };
 
-  if (loading && !data) return <p className="il-empty">Loading engagement…</p>;
+  if (loading && !data) return <SkeletonView stats={4} cards={4} twoCol />;
 
   const d = data ?? SAMPLE;
   const byStatus = (s: string) => d.leads.filter((l) => l.status === s).length;
@@ -106,7 +110,7 @@ export function EngagementView({ backendUrl, onChanged }: { backendUrl: string; 
   const activityRows: FeedRow[] = activity.map((a) => ({
     id: a.id,
     dot: a.type === 'form_submit' || a.type === 'reply' ? 'success' : a.type === 'booked' ? 'warning' : 'accent',
-    title: `${prettyType(a.type)}${a.path ? ` · ${a.path}` : a.detail ? ` · ${a.detail}` : ''}`,
+    title: `${humanize(a.type)}${a.path ? ` · ${a.path}` : a.detail ? ` · ${a.detail}` : ''}`,
     meta: a.lead_email ?? undefined,
   }));
 
@@ -114,7 +118,14 @@ export function EngagementView({ backendUrl, onChanged }: { backendUrl: string; 
     <section className="il-view">
       <div className="il-view__head">
         <div>
-          <h1 className="il-view__title">Engagement</h1>
+          <h1 className="il-view__title">
+            Engagement{' '}
+            <InfoPopover label="What is engagement?" title="How this works">
+              New enquiries from the website land here as leads. Each moves through an automatic email
+              cadence — a welcome, gentle nudges, and re-booking prompts — sent from Nicole's Outlook.
+              Site activity (form opens, page views) shows on the right so you can see who's warming up.
+            </InfoPopover>
+          </h1>
           <p className="il-view__sub">
             {d.leads.length} lead{d.leads.length === 1 ? '' : 's'} · {dueCount} with a step due
             {offline && <Badge tone="warning">&nbsp;offline preview&nbsp;</Badge>}
@@ -134,19 +145,25 @@ export function EngagementView({ backendUrl, onChanged }: { backendUrl: string; 
       </div>
 
       <div className="il-cols">
+        {d.leads.length === 0 ? (
+          <EmptyState icon="◐" title="No leads yet">
+            New enquiries flow in here from the website contact and booking forms, then move through the
+            welcome and re-booking cadence automatically.
+          </EmptyState>
+        ) : (
         <div className="il-grid">
           {d.leads.map((l) => (
             <Card
               key={l.id}
               title={l.email ?? 'Unknown lead'}
-              meta={`${l.status}${l.sent_steps.length ? ` · ${l.sent_steps.length} sent` : ''}`}
+              meta={`${humanize(l.status)}${l.sent_steps.length ? ` · ${l.sent_steps.length} sent` : ''}`}
               actions={
                 l.next_action === 'send' ? (
-                  <Badge tone="accent">next: {l.next_step}</Badge>
+                  <Badge tone="accent">Next: {humanize(l.next_step)}</Badge>
                 ) : l.next_action === 'deactivate' ? (
-                  <Badge tone="warning">deactivating</Badge>
+                  <Badge tone="warning">Deactivating</Badge>
                 ) : (
-                  <Badge tone={STATUS_TONE[l.status] ?? 'neutral'}>{l.status}</Badge>
+                  <Badge tone={STATUS_TONE[l.status] ?? 'neutral'}>{humanize(l.status)}</Badge>
                 )
               }
             >
@@ -163,12 +180,9 @@ export function EngagementView({ backendUrl, onChanged }: { backendUrl: string; 
             </Card>
           ))}
         </div>
+        )}
         <Feed title="Live site activity" rows={activityRows} empty="No site activity yet." />
       </div>
     </section>
   );
-}
-
-function prettyType(t: string): string {
-  return t.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
 }

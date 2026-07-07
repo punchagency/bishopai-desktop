@@ -26,7 +26,7 @@ export function TopBar({ courierState, courierPhase, courierMessage, backendOnli
   return (
     <header className="il-topbar">
       <span className="il-topbar__brand">
-        <img className="il-topbar__logo" src="/mark.png" alt="Innerlume" />
+        <img className="il-topbar__logo" src="/emblem.png" alt="Innerlume" />
         Innerlume
       </span>
       <div className="il-topbar__spacer" />

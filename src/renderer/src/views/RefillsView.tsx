@@ -4,6 +4,8 @@ import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { InfoPopover } from '../components/InfoPopover';
 import { fetchRefillDigest, sendRefillOrders, skipRefill, snoozeRefill } from '../lib/api';
+import { SkeletonView } from '../components/Skeleton';
+import { EmptyState } from '../components/EmptyState';
 import type { RefillDigest, RefillItem, RefillTier, RefillSendResponse } from '../lib/types';
 
 // WF4: refill reminders timed off each supplement's run-out (projected nightly
@@ -99,7 +101,7 @@ export function RefillsView({ backendUrl, onChanged }: { backendUrl: string; onC
     send(d.refills.filter((r) => r.tier !== 'coming' && r.status === 'pending').map((r) => r.id));
   };
 
-  if (loading && !digest) return <p className="il-empty">Loading refill digest…</p>;
+  if (loading && !digest) return <SkeletonView cards={6} />;
 
   const d = digest ?? SAMPLE;
   const dueCount = d.refills.filter((r) => r.tier !== 'coming' && r.status === 'pending').length;
@@ -211,7 +213,12 @@ export function RefillsView({ backendUrl, onChanged }: { backendUrl: string; onC
         })}
       </div>
 
-      {d.refills.length === 0 && <p className="il-empty">No refills due right now. 🌿</p>}
+      {d.refills.length === 0 && (
+        <EmptyState icon="↻" title="No refills due">
+          Clients appear here as their supplements run low — usually within about two weeks of running
+          out, projected nightly from each supplement's dose and quantity.
+        </EmptyState>
+      )}
     </section>
   );
 }

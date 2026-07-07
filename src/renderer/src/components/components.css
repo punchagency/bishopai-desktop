@@ -67,11 +67,13 @@
   font-size: 1.02rem;
   margin: 0 0 0.15rem;
   color: var(--text);
+  overflow-wrap: anywhere;
 }
 .il-card__meta {
   font-size: 0.8rem;
   color: var(--text-muted);
   margin: 0;
+  overflow-wrap: anywhere;
 }
 
 /* Badge */
@@ -572,4 +574,98 @@
 }
 .il-card__note a {
   color: var(--accent);
+}
+
+/* Loading skeletons — shimmer via .il-skel::after (keyframe in animations.css). */
+.il-skel {
+  display: block;
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+}
+.il-skel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--text) 8%, transparent) 50%,
+    transparent 100%
+  );
+  animation: il-shimmer 1.5s ease-in-out infinite;
+}
+/* Skeleton cards: same shell as .il-card, just laid out for placeholder rows.
+   Suppress the real card hover-lift while loading. */
+.il-skel-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  pointer-events: none;
+}
+.il-skel-card:hover {
+  transform: none;
+  box-shadow: var(--shadow-sm);
+  border-color: var(--border);
+}
+.il-skel-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+.il-skel-card__titles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  flex: 1;
+  min-width: 0;
+}
+.il-skel-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  margin-top: 0.9rem;
+}
+
+/* Empty states — reassuring, explanatory placeholders for zero-row lists. */
+.il-emptystate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.55rem;
+  padding: 3.5rem 1.5rem;
+  max-width: 30rem;
+  margin: 0 auto;
+  animation: il-fade-up 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+.il-emptystate__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.6rem;
+  height: 3.6rem;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  font-size: 1.5rem;
+  line-height: 1;
+  margin-bottom: 0.35rem;
+}
+.il-emptystate__title {
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  margin: 0;
+  color: var(--text);
+}
+.il-emptystate__body {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+.il-emptystate__action {
+  margin-top: 0.6rem;
 }

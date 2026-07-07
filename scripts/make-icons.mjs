@@ -18,13 +18,73 @@ import sharp from 'sharp';
 import { mkdir } from 'node:fs/promises';
 
 const OUT = 'build';
-const BG = '#823818'; // sampled logo background (terracotta)
+const BG = '#7f3110'; // exact logo background (terracotta), sampled from public/logo.png
 const CREAM = '#f2e4d8';
 
 await mkdir(OUT, { recursive: true });
 
-// Full logo → PNG for window / dock / packaging.
-await sharp('public/icon.jpg').resize(512, 512, { kernel: 'lanczos3' }).png().toFile(`${OUT}/icon.png`);
+// Full logo → PNG for the macOS dock + packaging (electron-builder derives the
+// platform icon from this). Source is the clean brand mark pulled from the site
+// favicon (artifact-free, flat terracotta), kept as a lossless PNG in
+// public/logo.png (also used by the splash screen).
+await sharp('public/logo.png').resize(512, 512, { kernel: 'lanczos3' }).png().toFile(`${OUT}/icon.png`);
+
+// Emblem tile — the REAL standalone mortar-&-pestle emblem (the transparent
+// line-art the practice uses on its own, kept in public/emblem-src.png), on a
+// rounded terracotta tile. Used as the window/taskbar icon (Linux/Windows) and
+// the in-app header mark. The catch: it's hairline cream line-art, so at ~28px it
+// averages to a plain brown square. So we THICKEN it: threshold to solid, dilate
+// the strokes a couple px, then downscale — still the actual art, just bold
+// enough to read small. (The tray at ~16px uses the vector mark below — even
+// this mushes at that size.)
+async function boldEmblemMark() {
+  const src = await sharp('public/emblem-src.png').ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const { data, info } = src;
+  const W = info.width;
+  const H = info.height;
+  const mask = Buffer.alloc(W * H);
+  for (let i = 0, j = 3; i < W * H; i++, j += 4) mask[i] = data[j] > 60 ? 255 : 0; // solid
+  const r = 2; // dilation radius — fattens the hairline strokes
+  const dil = Buffer.alloc(W * H);
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      let on = 0;
+      for (let dy = -r; dy <= r && !on; dy++) {
+        for (let dx = -r; dx <= r; dx++) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx >= 0 && nx < W && ny >= 0 && ny < H && mask[ny * W + nx]) {
+            on = 1;
+            break;
+          }
+        }
+      }
+      dil[y * W + x] = on ? 255 : 0;
+    }
+  }
+  const out = Buffer.alloc(W * H * 4);
+  for (let i = 0, j = 0; i < W * H; i++, j += 4) {
+    out[j] = 242;
+    out[j + 1] = 228;
+    out[j + 2] = 216; // cream
+    out[j + 3] = dil[i];
+  }
+  return sharp(out, { raw: { width: W, height: H, channels: 4 } }).png().toBuffer();
+}
+const boldMark = await boldEmblemMark();
+async function emblemTile(size) {
+  const pad = Math.round(size * 0.15);
+  const inner = await sharp(boldMark)
+    .resize(size - pad * 2, size - pad * 2, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .toBuffer();
+  const radius = Math.round(size * 0.24);
+  const tile = Buffer.from(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}"><rect width="${size}" height="${size}" rx="${radius}" fill="${BG}"/></svg>`,
+  );
+  return sharp(tile).composite([{ input: inner, gravity: 'center' }]).png();
+}
+await (await emblemTile(256)).toFile(`${OUT}/emblem.png`); // window/taskbar icon
+await (await emblemTile(128)).toFile('public/emblem.png'); // in-app header mark
 
 // Simplified mark — rounded terracotta tile + bold cream mortar & pestle.
 const tileSvg = `

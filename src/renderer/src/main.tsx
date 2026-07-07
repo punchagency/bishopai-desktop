@@ -6,6 +6,7 @@ import { App } from './App';
 import './theme/theme.css';
 import './components/components.css';
 import './index.css';
+import './theme/animations.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

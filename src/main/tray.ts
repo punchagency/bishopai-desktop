@@ -1,8 +1,16 @@
 import { app, Menu, nativeImage, Tray } from 'electron';
 import { join } from 'node:path';
+import { existsSync } from 'node:fs';
 import { courier, type CourierStatus } from './courier';
 
 let tray: Tray | null = null;
+
+// desktop/build — resolve from __dirname (out/main → ../../build), stable in dev;
+// fall back to app.getAppPath() for the packaged layout.
+function assetsDir(): string {
+  const rel = join(__dirname, '../../build');
+  return existsSync(join(rel, 'tray.png')) ? rel : join(app.getAppPath(), 'build');
+}
 
 // A simplified bold mark (not the detailed logo) — see scripts/make-icons.mjs.
 // Source + sizing are platform-specific for crispness:
@@ -10,13 +18,16 @@ let tray: Tray | null = null;
 //   • Linux  → one large PNG; GTK/AppIndicator (Cinnamon) downscales to the panel.
 //   • Windows→ 16px base with @1.25x/@1.5x/@2x HiDPI variants alongside it.
 function trayImage() {
-  const dir = join(app.getAppPath(), 'build');
+  const dir = assetsDir();
   if (process.platform === 'darwin') {
     const img = nativeImage.createFromPath(join(dir, 'trayTemplate.png'));
     img.setTemplateImage(true);
     return img;
   }
-  const file = process.platform === 'linux' ? 'tray-large.png' : 'tray.png';
+  // Linux (Cinnamon/GTK) renders the tray at ~22px+ and downscales a large PNG,
+  // so it can carry the REAL emblem. Windows draws it at 16px where the emblem
+  // mushes — keep the bold vector mark there.
+  const file = process.platform === 'linux' ? 'emblem.png' : 'tray.png';
   return nativeImage.createFromPath(join(dir, file));
 }
 

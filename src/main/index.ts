@@ -54,14 +54,65 @@ function loadConfig(): void {
   webhookSecret = process.env.BEE_WEBHOOK_SECRET ?? file.beeWebhookSecret;
 }
 
-const assets = join(app.getAppPath(), 'build');
-// The full logo is only legible large (macOS dock). The window/taskbar icon on
-// Linux/Windows renders small (~24–48px), where the logo-with-text blurs just
-// like the tray did — so use the simplified MARK there. See make-icons.mjs.
-const logoPath = join(assets, 'icon.png'); // full logo
-const windowIconPath = process.platform === 'darwin' ? logoPath : join(assets, 'mark.png');
+// Brand assets live in desktop/build. Resolve from __dirname (out/main → ../../build)
+// which is stable in dev; fall back to app.getAppPath() for the packaged layout.
+const assets = existsSync(join(__dirname, '../../build', 'icon.png'))
+  ? join(__dirname, '../../build')
+  : join(app.getAppPath(), 'build');
+// The full logo (with wordmark) is only legible large — perfect for the macOS
+// dock. The window/taskbar icon on Linux/Windows renders small (~24–48px), where
+// the wordmark blurs, so use the REAL mortar-&-pestle emblem tile (cropped from
+// the logo, not a redrawn vector). See make-icons.mjs.
+const logoPath = join(assets, 'icon.png'); // full logo (dock)
+const windowIconPath = process.platform === 'darwin' ? logoPath : join(assets, 'emblem.png');
 
 let mainWindow: BrowserWindow | null = null;
+let splashWindow: BrowserWindow | null = null;
+let splashShownAt = 0;
+// Keep the splash up at least this long so its entrance animation isn't cut off
+// on a fast boot — but never block a slow one longer than it needs.
+const SPLASH_MIN_MS = 1500;
+
+/** Frameless, transparent branded splash shown while the dashboard boots.
+ *  Loaded from the renderer's public assets (splash.html + logo-mark.png) so it
+ *  works identically in dev (dev server) and packaged (file://). Closed the
+ *  moment the main window is ready to show. */
+function createSplash(): void {
+  const splash = new BrowserWindow({
+    width: 440,
+    height: 320,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    center: true,
+    show: false,
+    // Match the logo's own rust so it never flashes a white box if the WM
+    // can't composite transparency.
+    backgroundColor: '#7f3110',
+    skipTaskbar: true,
+    webPreferences: { sandbox: true },
+  });
+  splashWindow = splash;
+  splash.once('ready-to-show', () => {
+    if (splash.isDestroyed()) return;
+    splashShownAt = Date.now();
+    splash.show();
+  });
+  splash.on('closed', () => {
+    if (splashWindow === splash) splashWindow = null;
+  });
+  if (process.env.ELECTRON_RENDERER_URL) {
+    void splash.loadURL(`${process.env.ELECTRON_RENDERER_URL}/splash.html`);
+  } else {
+    void splash.loadFile(join(__dirname, '../renderer/splash.html'));
+  }
+}
+
+/** Dismiss the splash (if still up) once the dashboard has painted. */
+function closeSplash(): void {
+  if (splashWindow && !splashWindow.isDestroyed()) splashWindow.close();
+  splashWindow = null;
+}
 
 /** Focus the dashboard if open, otherwise (re)create it. Used by the tray. */
 function ensureWindow(): void {
@@ -92,7 +143,22 @@ function createWindow(): void {
   });
 
   mainWindow = win;
-  win.once('ready-to-show', () => win.show());
+  // Linux (X11): the constructor `icon` sets _NET_WM_ICON, but some WMs (incl.
+  // Cinnamon's window-list) only pick it up from an explicit setIcon after the
+  // window exists. Belt-and-suspenders — no-op on mac/win where the packaged
+  // icon governs.
+  if (process.platform === 'linux') {
+    const img = nativeImage.createFromPath(windowIconPath);
+    if (!img.isEmpty()) win.setIcon(img);
+  }
+  win.once('ready-to-show', () => {
+    // Hold the splash for its minimum, then cross over to the dashboard.
+    const wait = Math.max(0, SPLASH_MIN_MS - (Date.now() - splashShownAt));
+    setTimeout(() => {
+      win.show();
+      closeSplash();
+    }, splashShownAt ? wait : 0);
+  });
 
   // Forward live courier status to this window.
   const onStatus = (s: unknown) => win.webContents.send('bee:status', s);
@@ -119,6 +185,8 @@ ipcMain.on('app:open-external', (_e, url: string) => {
   if (typeof url === 'string' && url.startsWith('https://bee.computer/')) void shell.openExternal(url);
 });
 
+app.setName('Innerlume'); // WM/window title + helps Linux associate the icon
+
 app.whenReady().then(() => {
   loadConfig(); // resolve backendUrl + webhookSecret (env → config file → default)
   if (process.platform === 'darwin') app.dock?.setIcon(nativeImage.createFromPath(logoPath));
@@ -132,6 +200,7 @@ app.whenReady().then(() => {
     beeEnv: bee.env,
   });
   createTray(ensureWindow); // courier lives in the tray; syncs with window closed
+  createSplash(); // branded splash while the dashboard boots
   createWindow();
 
   app.on('activate', () => {

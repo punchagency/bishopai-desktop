@@ -17,7 +17,8 @@ export default defineConfig({
   },
   renderer: {
     root: resolve(__dirname, 'src/renderer'),
-    // Brand assets (icon.jpg) live at desktop/public and serve from '/'.
+    // Brand assets (logo.png, mark.png, splash.html) live at desktop/public and
+    // serve from '/' in dev, copied to out/renderer on build.
     publicDir: resolve(__dirname, 'public'),
     build: {
       rollupOptions: {

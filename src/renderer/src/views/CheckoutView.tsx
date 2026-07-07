@@ -4,6 +4,10 @@ import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { approveCheckout, closeCheckout, fetchCheckouts, type CardInput } from '../lib/api';
 import { ReconciliationPanel } from './ReconciliationPanel';
+import { humanize } from '../lib/format';
+import { SkeletonView } from '../components/Skeleton';
+import { EmptyState } from '../components/EmptyState';
+import { InfoPopover } from '../components/InfoPopover';
 import type { CheckoutData, CheckoutItem } from '../lib/types';
 
 // WF2 (§6): the one custom, auditable money flow. Two Nicole actions — approve
@@ -31,14 +35,14 @@ function sCheckout(id: string, client: string, status: string, total: number): C
 const RANK: Record<string, number> = {
   AWAITING_APPROVAL: 0, CHARGE_FAILED: 0, CHARGING: 1, CHARGED: 2, DOCS_UPDATED: 3, PB_MARKED: 4, CLOSED: 5,
 };
-function systemsFor(status: string): { name: string; done: boolean }[] {
+function systemsFor(status: string): { name: string; done: boolean; hint: string }[] {
   const r = RANK[status] ?? 0;
   return [
-    { name: 'QuickBooks', done: r >= 2 },
-    { name: 'Fullscript', done: r >= 2 },
-    { name: 'Appt Sheet', done: r >= 3 },
-    { name: 'Protocol', done: r >= 3 },
-    { name: 'Practice Better', done: r >= 4 },
+    { name: 'QuickBooks', done: r >= 2, hint: 'Card charged and the payment recorded in QuickBooks' },
+    { name: 'Fullscript', done: r >= 2, hint: 'Any supplements sent to Fullscript for the client' },
+    { name: 'Appt Sheet', done: r >= 3, hint: "The session's Appointment Sheet written to Drive" },
+    { name: 'Protocol', done: r >= 3, hint: "The client's Protocol document updated" },
+    { name: 'Practice Better', done: r >= 4, hint: 'The session marked billed/complete in Practice Better' },
   ];
 }
 
@@ -46,6 +50,15 @@ const STATUS_TONE: Record<string, 'warning' | 'accent' | 'success' | 'neutral'> 
   AWAITING_APPROVAL: 'warning', CHARGE_FAILED: 'warning',
   CHARGING: 'accent', CHARGED: 'accent', DOCS_UPDATED: 'accent', PB_MARKED: 'accent',
   CLOSED: 'success',
+};
+const STATUS_HINT: Record<string, string> = {
+  AWAITING_APPROVAL: 'Ready for you to review and approve the charge.',
+  CHARGING: 'The card is being charged through QuickBooks Payments.',
+  CHARGED: 'Payment succeeded; finishing the follow-up steps.',
+  CHARGE_FAILED: 'The charge did not go through — review it in QuickBooks.',
+  DOCS_UPDATED: 'Documents written; marking the session in Practice Better.',
+  PB_MARKED: 'Marked in Practice Better; ready to confirm and close.',
+  CLOSED: 'Done — paid, documented, and recorded everywhere.',
 };
 const money = (cents: number, ccy = 'USD') =>
   new Intl.NumberFormat(undefined, { style: 'currency', currency: ccy }).format(cents / 100);
@@ -101,7 +114,7 @@ export function CheckoutView({ backendUrl, onChanged }: { backendUrl: string; on
     }
   };
 
-  if (loading && !data) return <p className="il-empty">Loading checkout…</p>;
+  if (loading && !data) return <SkeletonView cards={6} />;
 
   const d = data ?? SAMPLE;
   const awaiting = d.checkouts.filter((c) => c.status === 'AWAITING_APPROVAL').length;
@@ -110,11 +123,26 @@ export function CheckoutView({ backendUrl, onChanged }: { backendUrl: string; on
     <section className="il-view">
       <div className="il-view__head">
         <div>
-          <h1 className="il-view__title">Checkout</h1>
+          <h1 className="il-view__title">
+            Checkout{' '}
+            <InfoPopover label="How checkout works" title="How this works">
+              When a session is marked complete, a checkout is assembled here with the session fee and
+              any supplements. You review it and approve — the card is charged through QuickBooks
+              Payments and the payment is recorded against the client's books automatically.
+            </InfoPopover>
+          </h1>
           <p className="il-view__sub">
             {awaiting} awaiting approval
             {offline && <Badge tone="warning">&nbsp;offline preview&nbsp;</Badge>}
-            {!offline && !d.quickbooks_configured && <Badge tone="neutral">&nbsp;QuickBooks dry-run&nbsp;</Badge>}
+            {!offline && !d.quickbooks_configured && (
+              <>
+                <Badge tone="neutral">&nbsp;QuickBooks dry-run&nbsp;</Badge>{' '}
+                <InfoPopover label="What is dry-run?" title="Dry-run mode">
+                  QuickBooks isn't connected yet, so approving runs the whole flow but doesn't move any
+                  money — safe to try. Add the QuickBooks credentials to go live; nothing else changes.
+                </InfoPopover>
+              </>
+            )}
           </p>
         </div>
       </div>
@@ -130,11 +158,15 @@ export function CheckoutView({ backendUrl, onChanged }: { backendUrl: string; on
               key={c.id}
               title={c.client_name ?? 'Unknown client'}
               meta={`${money(total, ccy)}${c.summary_snapshot ? ` · ${c.summary_snapshot.line_items.length} items` : ''}`}
-              actions={<Badge tone={STATUS_TONE[c.status] ?? 'neutral'}>{prettyStatus(c.status)}</Badge>}
+              actions={
+                <Badge tone={STATUS_TONE[c.status] ?? 'neutral'} title={STATUS_HINT[c.status]}>
+                  {humanize(c.status)}
+                </Badge>
+              }
             >
               <div className="il-systems">
                 {systemsFor(c.status).map((s) => (
-                  <span key={s.name} className="il-system">
+                  <span key={s.name} className="il-system" title={`${s.name} — ${s.hint}${s.done ? ' ✓' : ' (pending)'}`}>
                     <span className={`il-dot il-dot--${s.done ? 'connected' : 'disconnected'}`} /> {s.name}
                   </span>
                 ))}
@@ -197,11 +229,12 @@ export function CheckoutView({ backendUrl, onChanged }: { backendUrl: string; on
         })}
       </div>
 
-      {d.checkouts.length === 0 && <p className="il-empty">No checkouts yet. They appear when a session is marked complete.</p>}
+      {d.checkouts.length === 0 && (
+        <EmptyState icon="＄" title="No checkouts yet">
+          A checkout appears here when a session is marked complete in Practice Better — with the
+          session fee and any supplements ready to review and charge.
+        </EmptyState>
+      )}
     </section>
   );
-}
-
-function prettyStatus(s: string): string {
-  return s.replace(/_/g, ' ').toLowerCase();
 }
