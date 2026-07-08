@@ -17,6 +17,7 @@ import type { EngagementData, EngagementLead, LeadActivityItem } from '../lib/ty
 
 const SAMPLE: EngagementData = {
   outlook_configured: false,
+  outlook_sender: null,
   leads: [
     sLead('a', 'sarah.m@example.com', 'new', 'send', 'welcome', 2),
     sLead('b', 'james.t@example.com', 'contacted', 'send', 'nudge_3d', 2),

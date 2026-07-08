@@ -158,11 +158,7 @@ export function CheckoutView({ backendUrl, onChanged }: { backendUrl: string; on
               key={c.id}
               title={c.client_name ?? 'Unknown client'}
               meta={`${money(total, ccy)}${c.summary_snapshot ? ` · ${c.summary_snapshot.line_items.length} items` : ''}`}
-              actions={
-                <Badge tone={STATUS_TONE[c.status] ?? 'neutral'} title={STATUS_HINT[c.status]}>
-                  {humanize(c.status)}
-                </Badge>
-              }
+              actions={<Badge tone={STATUS_TONE[c.status] ?? 'neutral'} title={STATUS_HINT[c.status]}>{humanize(c.status)}</Badge>}
             >
               <div className="il-systems">
                 {systemsFor(c.status).map((s) => (

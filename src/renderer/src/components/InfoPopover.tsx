@@ -1,57 +1,75 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
-// Small "ⓘ" trigger that reveals an explanation popover. Used to explain
-// dashboard concepts to Nicole in-context (dry-run, refill tiers, why a send
-// failed, what a Fullscript draft plan is). Closes on outside-click and Escape.
 export function InfoPopover({
   label,
   title,
   children,
 }: {
-  /** Accessible name for the trigger, e.g. "What does dry-run mean?" */
   label: string;
-  /** Optional heading shown at the top of the popover. */
   title?: string;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
   const wrapRef = useRef<HTMLSpanElement>(null);
   const panelId = useId();
 
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node))
+        setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
+      if (e.key === "Escape") setOpen(false);
     };
-    document.addEventListener('mousedown', onDown);
-    document.addEventListener('keydown', onKey);
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
     return () => {
-      document.removeEventListener('mousedown', onDown);
-      document.removeEventListener('keydown', onKey);
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
     };
   }, [open]);
 
+  const handleOpen = () => {
+    if (wrapRef.current) {
+      const r = wrapRef.current.getBoundingClientRect();
+      const panelWidth = 352;
+      const left = Math.min(
+        Math.max(8, r.left + r.width / 2 - panelWidth / 2),
+        window.innerWidth - panelWidth - 8,
+      );
+      setPos({ top: r.bottom + 6, left });
+    }
+    setOpen((v) => !v);
+  };
+
   return (
-    <span className="il-info" ref={wrapRef}>
+    <span className="il-info m-2" style={{ margin: "8px" }} ref={wrapRef}>
       <button
         type="button"
         className="il-info__trigger"
         aria-label={label}
         aria-expanded={open}
         aria-controls={panelId}
-        onClick={() => setOpen((v) => !v)}
+        onClick={handleOpen}
       >
         i
       </button>
-      {open && (
-        <span className="il-info__panel" id={panelId} role="tooltip">
-          {title && <span className="il-info__title">{title}</span>}
-          <span className="il-info__body">{children}</span>
-        </span>
-      )}
+      {open &&
+        createPortal(
+          <span
+            className="il-info__panel"
+            id={panelId}
+            role="tooltip"
+            style={{ top: pos.top, left: pos.left }}
+          >
+            {title && <span className="il-info__title">{title}</span>}
+            <span className="il-info__body">{children}</span>
+          </span>,
+          document.body,
+        )}
     </span>
   );
 }

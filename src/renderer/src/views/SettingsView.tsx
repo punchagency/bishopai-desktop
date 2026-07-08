@@ -4,6 +4,7 @@ import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { fetchAuthStatus, login, updateAuthSettings } from '../lib/api';
 import { CustomerMapCard } from './CustomerMapCard';
+import { OutlookCard } from './OutlookCard';
 import type { AuthStatus } from '../lib/types';
 
 // Settings — where Nicole controls the local dashboard login: turn it on/off and
@@ -13,11 +14,13 @@ export function SettingsView({
   token,
   onAuthChanged,
   onLock,
+  onShowOnboarding,
 }: {
   backendUrl: string;
   token: string | null;
   onAuthChanged: (status: AuthStatus, token?: string | null) => void;
   onLock: () => void;
+  onShowOnboarding?: () => void;
 }) {
   const [status, setStatus] = useState<AuthStatus | null>(null);
   const [enabled, setEnabled] = useState(false);
@@ -75,6 +78,9 @@ export function SettingsView({
             Dashboard access
             {offline && <Badge tone="warning">&nbsp;backend offline&nbsp;</Badge>}
           </p>
+          {onShowOnboarding && (
+            <button className="il-link" onClick={onShowOnboarding}>Show welcome guide</button>
+          )}
         </div>
       </div>
 
@@ -121,6 +127,8 @@ export function SettingsView({
         </div>
         {needsPassword && <p className="il-view__sub">Set a password before turning login on.</p>}
       </Card>
+
+      <OutlookCard backendUrl={backendUrl} />
 
       <CustomerMapCard backendUrl={backendUrl} />
     </section>

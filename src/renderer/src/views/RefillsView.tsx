@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Card } from '../components/Card';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
+import { DropdownMenu } from '../components/DropdownMenu';
 import { InfoPopover } from '../components/InfoPopover';
 import { fetchRefillDigest, sendRefillOrders, skipRefill, snoozeRefill } from '../lib/api';
 import { SkeletonView } from '../components/Skeleton';
@@ -180,20 +181,23 @@ export function RefillsView({ backendUrl, onChanged }: { backendUrl: string; onC
               meta={r.supplement_name ?? 'supplement'}
               actions={<Badge tone={TONE[r.tier]}>{daysLabel(r.days_left)}</Badge>}
             >
-              <div className="il-card__row">
-                <Button variant="ghost" disabled={pending === r.id} onClick={() => act(r.id, () => skipRefill(backendUrl, r.id))}>
-                  Skip
-                </Button>
-                <Button variant="secondary" disabled={pending === r.id} onClick={() => act(r.id, () => snoozeRefill(backendUrl, r.id))}>
-                  Snooze
-                </Button>
+              <div className="il-refill-actions">
                 <Button
                   variant="primary"
+                  className="il-refill-actions__send"
                   disabled={sending || r.status !== 'pending'}
                   onClick={() => send([r.id])}
                 >
-                  {r.status === 'notified' ? 'Sent' : 'Send'}
+                  {r.status === 'notified' ? 'Sent' : 'Send to Fullscript'}
                 </Button>
+                <DropdownMenu
+                  label="⋮"
+                  disabled={!!pending || offline}
+                  items={[
+                    { label: 'Snooze', disabled: pending === r.id, onClick: () => act(r.id, () => snoozeRefill(backendUrl, r.id)) },
+                    { label: 'Skip',   disabled: pending === r.id, onClick: () => act(r.id, () => skipRefill(backendUrl, r.id)) },
+                  ]}
+                />
               </div>
               {outcome && !outcome.ok ? (
                 <p className="il-card__note il-error">Couldn’t send — {outcome.error}</p>

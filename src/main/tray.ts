@@ -27,12 +27,21 @@ function trayImage() {
   // Linux (Cinnamon/GTK) renders the tray at ~22px+ and downscales a large PNG,
   // so it can carry the REAL emblem. Windows draws it at 16px where the emblem
   // mushes — keep the bold vector mark there.
-  const file = process.platform === 'linux' ? 'emblem.png' : 'tray.png';
-  return nativeImage.createFromPath(join(dir, file));
+  const file = process.platform === 'linux' ? 'tray-linux.png' : 'tray.png';
+  const img = nativeImage.createFromPath(join(dir, file));
+  return img;
 }
 
 export function createTray(ensureWindow: () => void): void {
-  tray = new Tray(trayImage());
+  try {
+    const img = trayImage();
+    console.log('[tray] image empty?', img.isEmpty(), 'size:', JSON.stringify(img.getSize()));
+    tray = new Tray(img);
+    console.log('[tray] created ok');
+  } catch (err) {
+    console.error('[tray] failed to create:', err);
+    return;
+  }
 
   const rebuild = (s: CourierStatus) => {
     tray?.setToolTip(`Innerlume — ${s.message}`);

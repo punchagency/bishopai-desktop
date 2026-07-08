@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 
 interface ModalProps {
   title: string;
@@ -14,7 +15,7 @@ export function Modal({ title, onClose, footer, children }: ModalProps) {
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  return (
+  return createPortal(
     <div className="il-modal__scrim" onMouseDown={onClose}>
       <div className="il-modal" onMouseDown={(e) => e.stopPropagation()}>
         <header className="il-modal__head">
@@ -26,6 +27,7 @@ export function Modal({ title, onClose, footer, children }: ModalProps) {
         <div className="il-modal__body">{children}</div>
         {footer && <footer className="il-modal__foot">{footer}</footer>}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

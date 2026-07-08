@@ -12,6 +12,7 @@ import { SettingsView } from './views/SettingsView';
 import { Login } from './views/Login';
 import { fetchAuthStatus, fetchOverview, setAuthToken, setUnauthorizedHandler } from './lib/api';
 import type { AuthStatus, CourierStatus, ViewKey } from './lib/types';
+import { Onboarding } from './views/Onboarding';
 
 const DEFAULT_BACKEND = 'http://localhost:3000';
 const TOKEN_KEY = 'innerlume.token';
@@ -26,6 +27,12 @@ export function App() {
   const [backendUrl, setBackendUrl] = useState(DEFAULT_BACKEND);
   const [courier, setCourier] = useState<CourierStatus>(DISCONNECTED);
   const [view, setView] = useState<ViewKey>('overview');
+  const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('innerlume.onboarded'));
+
+  const dismissOnboarding = () => {
+    localStorage.setItem('innerlume.onboarded', '1');
+    setShowOnboarding(false);
+  };
   const [counts, setCounts] = useState<Partial<Record<ViewKey, number>>>({});
   const [backendOnline, setBackendOnline] = useState(true);
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
@@ -104,6 +111,13 @@ export function App() {
 
   return (
     <div className="il-app">
+      {showOnboarding && (
+        <Onboarding
+          courierState={courier.state}
+          onConnectBee={connectBee}
+          onDismiss={dismissOnboarding}
+        />
+      )}
       <TopBar
         courierState={courier.state}
         courierPhase={courier.phase}
@@ -139,6 +153,7 @@ export function App() {
                 if (t !== undefined) applyToken(t);
               }}
               onLock={() => applyToken(null)}
+              onShowOnboarding={() => setShowOnboarding(true)}
             />
           )}
         </main>

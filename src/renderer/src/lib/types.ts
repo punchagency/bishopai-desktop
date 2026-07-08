@@ -210,7 +210,26 @@ export interface LeadActivityItem {
 }
 export interface EngagementData {
   outlook_configured: boolean;
+  outlook_sender: string | null;
   leads: EngagementLead[];
+}
+
+// One connected mailbox.
+export interface OutlookAccount {
+  sender: string;
+  connectedAt: string | null;
+  primary: boolean;
+}
+
+// Outlook connect status (server/src/routes/outlook.ts → GET /auth/outlook/status).
+export interface OutlookStatus {
+  available: boolean; // Entra app registered → the Connect flow can be offered
+  connected: boolean; // at least one mailbox can send right now
+  sender: string | null; // the primary sender
+  primarySender: string | null;
+  connectedAt: string | null;
+  mode: 'oauth' | 'static' | 'none';
+  accounts: OutlookAccount[];
 }
 
 // Local dashboard auth (server/src/routes/auth.ts).

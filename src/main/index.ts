@@ -4,6 +4,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import { courier } from './courier';
 import { createTray } from './tray';
 
+
+
 // Locate the Bee CLI (`@beeai/cli`, bin/bee.js) that ships INSIDE the app, so
 // Nicole never installs Node, npm, or the CLI — she just runs the app. We run it
 // with Electron's own Node runtime (ELECTRON_RUN_AS_NODE). Checks the packaged
@@ -181,8 +183,28 @@ ipcMain.handle('app:info', () => ({ backendUrl, version: app.getVersion() }));
 ipcMain.handle('bee:status', () => courier.status());
 ipcMain.handle('bee:connect', () => courier.connect());
 ipcMain.on('app:open-external', (_e, url: string) => {
-  // Only allow the Bee approval origin to be opened externally.
-  if (typeof url === 'string' && url.startsWith('https://bee.computer/')) void shell.openExternal(url);
+  if (typeof url !== 'string') return;
+  // Allowlist by parsed ORIGIN (not string prefix, which `...@evil.com` and
+  // `localhost:3000.evil.com` slip past): the Bee approval origin, the Microsoft
+  // sign-in origin (the Outlook "Connect" flow opens Microsoft's consent screen),
+  // and the configured backend. Nothing else opens.
+  let u: URL;
+  try {
+    u = new URL(url);
+  } catch {
+    return;
+  }
+  if (u.protocol !== 'https:' && u.protocol !== 'http:') return;
+  const isBee = u.protocol === 'https:' && u.hostname === 'bee.computer';
+  const isMsLogin = u.protocol === 'https:' && u.hostname === 'login.microsoftonline.com';
+  let isBackend = false;
+  try {
+    const b = new URL(backendUrl);
+    isBackend = u.protocol === b.protocol && u.hostname === b.hostname && u.port === b.port;
+  } catch {
+    /* malformed backendUrl → only Bee / Microsoft are allowed */
+  }
+  if (isBee || isMsLogin || isBackend) void shell.openExternal(u.toString());
 });
 
 app.setName('Innerlume'); // WM/window title + helps Linux associate the icon

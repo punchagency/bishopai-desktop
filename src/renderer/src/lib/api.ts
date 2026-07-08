@@ -7,6 +7,7 @@ import type {
   ReconciliationData,
   EngagementData,
   LeadActivityItem,
+  OutlookStatus,
   Overview,
   RefillDigest,
   RefillSendResponse,
@@ -264,6 +265,36 @@ export function runCadence(backendUrl: string): Promise<{ scanned: number; sent:
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: '{}',
+  });
+}
+
+// --- Outlook connection (WF3) ------------------------------------------------
+
+/** Current Outlook connection status (open endpoint). */
+export function fetchOutlookStatus(backendUrl: string, signal?: AbortSignal): Promise<OutlookStatus> {
+  return json<OutlookStatus>(`${backendUrl}/auth/outlook/status`, { signal });
+}
+
+/** Mint the Microsoft consent URL (authenticated) to open in the system browser. */
+export function startOutlookConnect(backendUrl: string): Promise<{ url: string }> {
+  return json<{ url: string }>(`${backendUrl}/auth/outlook/start`);
+}
+
+/** Forget one Outlook mailbox (or all if sender omitted) → back to dry-run. */
+export function disconnectOutlook(backendUrl: string, sender?: string): Promise<OutlookStatus> {
+  return json(`${backendUrl}/auth/outlook/disconnect`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(sender ? { sender } : {}),
+  });
+}
+
+/** Choose which connected mailbox WF3 sends re-engagement email from. */
+export function setPrimaryOutlook(backendUrl: string, sender: string): Promise<OutlookStatus> {
+  return json(`${backendUrl}/auth/outlook/primary`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ sender }),
   });
 }
 
