@@ -882,3 +882,191 @@
   flex: 1;
   justify-content: center;
 }
+
+/* Premium Weekly Calendar View */
+.il-calendar {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  margin-top: 1rem;
+}
+
+.il-calendar__header-days {
+  display: grid;
+  grid-template-columns: 60px repeat(7, 1fr);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+  align-items: center;
+}
+
+.il-calendar__header-spacer {
+  height: 100%;
+  border-right: 1px solid var(--border);
+}
+
+.il-calendar__day-head {
+  padding: 0.75rem 0.5rem;
+  text-align: center;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border-right: 1px solid var(--border);
+}
+.il-calendar__day-head:last-child {
+  border-right: none;
+}
+.il-calendar__day-head--today {
+  color: var(--accent);
+}
+
+.il-calendar__day-head-name {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: block;
+}
+.il-calendar__day-head-date {
+  font-size: 1.1rem;
+  font-weight: 700;
+  display: block;
+  margin-top: 0.1rem;
+}
+
+.il-calendar__body-scroll {
+  max-height: 520px;
+  overflow-y: auto;
+  position: relative;
+}
+
+.il-calendar__grid-wrapper {
+  display: grid;
+  grid-template-columns: 60px repeat(7, 1fr);
+  position: relative;
+}
+
+.il-calendar__hours-col {
+  border-right: 1px solid var(--border);
+  background: var(--surface-2);
+  user-select: none;
+}
+
+.il-calendar__hour-slot {
+  height: 60px;
+  padding-right: 0.5rem;
+  padding-top: 0.25rem;
+  text-align: right;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.il-calendar__day-col {
+  position: relative;
+  height: 100%;
+  border-right: 1px solid var(--border);
+}
+.il-calendar__day-col:last-child {
+  border-right: none;
+}
+
+.il-calendar__grid-lines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.il-calendar__grid-line-row {
+  height: 60px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+}
+.il-calendar__grid-line-row:last-child {
+  border-bottom: none;
+}
+
+/* Event Positioned Cards */
+.il-calendar__event {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  padding: 0.45rem 0.55rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.76rem;
+  line-height: 1.3;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  z-index: 2;
+}
+.il-calendar__event:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+  z-index: 10;
+}
+
+.il-calendar__event--confirmed {
+  background: color-mix(in srgb, var(--success) 12%, var(--surface));
+  border-left: 3px solid var(--success);
+  color: var(--text);
+}
+
+.il-calendar__event--pending {
+  background: color-mix(in srgb, var(--warning) 12%, var(--surface));
+  border-left: 3px solid var(--warning);
+  color: var(--text);
+}
+
+.il-calendar__event--local {
+  background: var(--surface-2);
+  border-left: 3px solid var(--text-muted);
+  color: var(--text-muted);
+}
+
+.il-calendar__event-time {
+  font-weight: 700;
+  font-size: 0.7rem;
+  opacity: 0.85;
+}
+
+.il-calendar__event-title {
+  font-weight: 600;
+  margin: 0.15rem 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.il-calendar__event-meta {
+  font-size: 0.68rem;
+  opacity: 0.75;
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Slot Event styling */
+.il-calendar__event--slot {
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+  border: 1px dashed var(--accent);
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  cursor: pointer;
+  z-index: 1;
+}
+.il-calendar__event--slot:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-style: solid;
+}
+
+.il-calendar__event-slot-title {
+  font-weight: 600;
+  font-size: 0.72rem;
+}
+

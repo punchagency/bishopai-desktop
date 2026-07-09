@@ -14,6 +14,7 @@ const NAV: NavItem[] = [
   { key: 'checkout', label: 'Checkout', icon: '＄', status: 'live' },
   { key: 'refills', label: 'Refills', icon: '↻', status: 'live' },
   { key: 'engagement', label: 'Engagement', icon: '◐', status: 'live' },
+  { key: 'schedule', label: 'Schedule', icon: '⊡', status: 'live' },
   { key: 'settings', label: 'Settings', icon: '⚙' },
 ];
 

@@ -246,6 +246,7 @@ export type ViewKey =
   | 'checkout'
   | 'refills'
   | 'engagement'
+  | 'schedule'
   | 'settings';
 export type WorkflowStatus = 'live' | 'pending' | 'planned';
 
@@ -263,11 +264,40 @@ export interface ActivityItem {
   kind: string;
   text: string;
 }
-export interface UpcomingItem {
-  starts_at: string;
-  status: string;
+export interface UpcomingSession {
+  id: string;
+  pb_id: string | null;
   client_name: string | null;
+  starts_at: string;
+  ends_at: string | null;
+  status: string;
+  service_type: string | null;
+  source: 'pb' | 'local';
 }
+export interface BookingSlot {
+  starts_at: string;
+  ends_at: string;
+  label: string;
+}
+export interface OfficeHours {
+  timezone: string;
+  days: number[];            // JS day-of-week 0=Sun
+  start_hour: number;
+  end_hour: number;
+  session_duration_min: number;
+  slot_horizon_days: number;
+  max_slots: number;
+  service_id?: string;
+  service_type?: string;
+}
+export interface ScheduleData {
+  pb_configured: boolean;
+  sessions: UpcomingSession[];
+  slots: BookingSlot[]; // server-derived — the same slots offered in emails
+  office_hours: OfficeHours;
+}
+/** Alias kept for the Overview widget's upcoming list (same shape as UpcomingSession minus extras). */
+export type UpcomingItem = Pick<UpcomingSession, 'starts_at' | 'status' | 'client_name'>;
 export interface Overview {
   stats: OverviewStats;
   recent_activity: ActivityItem[];

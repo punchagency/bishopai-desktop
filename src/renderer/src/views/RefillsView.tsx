@@ -115,11 +115,10 @@ export function RefillsView({ backendUrl, onChanged }: { backendUrl: string; onC
         <div>
           <h1 className="il-view__title">
             Refills{' '}
-            <InfoPopover label="How refills reach Fullscript" title="How this works">
+            <InfoPopover label="How refill reminders work" title="How this works">
               Each supplement's run-out date is projected nightly from its dose, quantity, and start
-              date. Sending creates a <strong>draft treatment plan</strong> per client in Fullscript
-              (one recommendation per supplement, with the dose carried over). The client gets an
-              invitation link to review and purchase — nothing is charged here.
+              date. Sending emails a consolidated refill reminder to the client via Outlook, containing
+              the recommended quantities and a link to complete their purchase on the Fullscript dispensary.
             </InfoPopover>
           </h1>
           <p className="il-view__sub">
@@ -131,25 +130,24 @@ export function RefillsView({ backendUrl, onChanged }: { backendUrl: string; onC
             {offline && <Badge tone="warning">&nbsp;offline preview&nbsp;</Badge>}
             {!offline && !d.fullscript_configured && (
               <>
-                <Badge tone="neutral">&nbsp;Fullscript dry-run&nbsp;</Badge>{' '}
+                <Badge tone="neutral">&nbsp;Outlook dry-run&nbsp;</Badge>{' '}
                 <InfoPopover label="What is dry-run?" title="Dry-run mode">
-                  Fullscript isn't connected yet, so “Send” runs the full flow but doesn't create real
-                  plans — it's safe to try. Add the Fullscript credentials to go live; nothing else
-                  changes.
+                  Outlook isn't connected yet, so “Send” will log the email text but won't send the real
+                  emails. Connect Outlook in settings to go live.
                 </InfoPopover>
               </>
             )}
           </p>
         </div>
         <Button variant="primary" disabled={offline || sending || dueCount === 0} onClick={sendDue}>
-          {sending ? 'Sending…' : `Send ${dueCount} due to Fullscript`}
+          {sending ? 'Sending…' : `Send ${dueCount} email reminders`}
         </Button>
       </div>
 
       {result && (
         <div className="il-refill-result">
           <span>
-            <strong>{result.sent}</strong> plan{result.sent === 1 ? '' : 's'} created
+            <strong>{result.sent}</strong> reminder{result.sent === 1 ? '' : 's'} sent
             {result.failed > 0 && <>, <strong className="il-error">{result.failed} failed</strong></>}
             {!d.fullscript_configured && ' (dry-run)'}
           </span>
@@ -188,7 +186,7 @@ export function RefillsView({ backendUrl, onChanged }: { backendUrl: string; onC
                   disabled={sending || r.status !== 'pending'}
                   onClick={() => send([r.id])}
                 >
-                  {r.status === 'notified' ? 'Sent' : 'Send to Fullscript'}
+                  {r.status === 'notified' ? 'Sent' : 'Send email reminder'}
                 </Button>
                 <DropdownMenu
                   label="⋮"
@@ -205,9 +203,9 @@ export function RefillsView({ backendUrl, onChanged }: { backendUrl: string; onC
                 // Fresh send link, or the one persisted from a previous send.
                 (outcome?.invitation_url ?? r.invitation_url) && (
                   <p className="il-card__note">
-                    Plan created ·{' '}
+                    Reminder sent ·{' '}
                     <a href={(outcome?.invitation_url ?? r.invitation_url)!} target="_blank" rel="noreferrer">
-                      open in Fullscript
+                      open dispensary
                     </a>
                   </p>
                 )

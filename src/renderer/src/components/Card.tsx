@@ -21,7 +21,7 @@ export function Card({ title, meta, badge, actions, children }: CardProps) {
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
             <div style={{ minWidth: 0 }}>
               {title && <h3 className="il-card__title">{title}</h3>}
-              {meta && <p className="il-card__meta">{meta}</p>}
+              {meta && <p className="il-card__meta" style={{ marginTop: '0.3rem' }}>{meta}</p>}
             </div>
             {badge && actions && <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>{actions}</div>}
           </div>

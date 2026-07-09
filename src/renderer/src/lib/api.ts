@@ -7,12 +7,14 @@ import type {
   ReconciliationData,
   EngagementData,
   LeadActivityItem,
+  OfficeHours,
   OutlookStatus,
   Overview,
   RefillDigest,
   RefillSendResponse,
   ReviewKind,
   ReviewQueue,
+  ScheduleData,
   SessionNote,
   UnmatchedConversation,
 } from './types';
@@ -50,6 +52,38 @@ export function fetchReviewQueue(backendUrl: string, signal?: AbortSignal): Prom
 export function fetchOverview(backendUrl: string, signal?: AbortSignal): Promise<Overview> {
   return json<Overview>(`${backendUrl}/dashboard/overview`, { signal });
 }
+
+// --- Schedule (WF Item 4) -----------------------------------------------------
+
+/** Upcoming sessions for the Schedule view (PB or local DB fallback). */
+export function fetchSchedule(backendUrl: string, signal?: AbortSignal): Promise<ScheduleData> {
+  return json<ScheduleData>(`${backendUrl}/appointments/upcoming`, { signal });
+}
+
+/** Available booking slots derived from office hours minus booked sessions. */
+export function fetchSlots(backendUrl: string, signal?: AbortSignal): Promise<{ slots: import('./types').BookingSlot[]; office_hours: OfficeHours }> {
+  return json(`${backendUrl}/appointments/slots`, { signal });
+}
+
+/** Nicole's current office hours configuration. */
+export function fetchOfficeHours(backendUrl: string, signal?: AbortSignal): Promise<OfficeHours> {
+  return json<OfficeHours>(`${backendUrl}/appointments/office-hours`, { signal });
+}
+
+/** Save Nicole's office hours configuration. */
+export function saveOfficeHours(backendUrl: string, oh: OfficeHours): Promise<OfficeHours> {
+  return json<OfficeHours>(`${backendUrl}/appointments/office-hours`, {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(oh),
+  });
+}
+
+/** Practice Better services if configured. */
+export function fetchServices(backendUrl: string, signal?: AbortSignal): Promise<{ pb_configured: boolean; items: { id: string; name: string; duration?: number; serviceTypes?: string[] }[] }> {
+  return json(`${backendUrl}/appointments/services`, { signal });
+}
+
 
 /** Bee conversations that didn't correlate — need manual tagging. */
 export function fetchUnmatched(
