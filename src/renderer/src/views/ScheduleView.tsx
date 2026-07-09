@@ -64,12 +64,15 @@ export function ScheduleView({ backendUrl }: Props) {
         minute: 'numeric',
         hour12: false,
       }).formatToParts(new Date(iso));
-      const hour = Number(parts.find(p => p.type === 'hour')?.value ?? '0');
+      let hour = Number(parts.find(p => p.type === 'hour')?.value ?? '0');
+      if (hour === 24) hour = 0;
       const minute = Number(parts.find(p => p.type === 'minute')?.value ?? '0');
       return { hour, minute };
     } catch {
       const d = new Date(iso);
-      return { hour: d.getHours(), minute: d.getMinutes() };
+      let hour = d.getHours();
+      if (hour === 24) hour = 0;
+      return { hour, minute: d.getMinutes() };
     }
   };
 
@@ -203,7 +206,7 @@ export function ScheduleView({ backendUrl }: Props) {
   };
 
   const formatHour = (h: number) => {
-    const ampm = h >= 12 ? 'PM' : 'AM';
+    const ampm = (h % 24) >= 12 ? 'PM' : 'AM';
     const displayHour = h % 12 === 0 ? 12 : h % 12;
     return `${displayHour} ${ampm}`;
   };

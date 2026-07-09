@@ -10,7 +10,22 @@ const SUPP_CHANGES: Supplement['change'][] = ['start', 'stop', 'increase', 'decr
  * Deliberately field-level (no raw JSON) so it's usable by a non-technical user.
  */
 export function NoteEditor({ note, onChange }: { note: SessionNote; onChange: (n: SessionNote) => void }) {
-  const set = (patch: Partial<SessionNote>) => onChange({ ...note, ...patch });
+  const concerns = note?.concerns || [];
+  const assessments = note?.assessments || [];
+  const protocol_changes = note?.protocol_changes || [];
+  const supplements = note?.supplements || [];
+  const follow_ups = note?.follow_ups || [];
+
+  const set = (patch: Partial<SessionNote>) =>
+    onChange({
+      ...note,
+      concerns,
+      assessments,
+      protocol_changes,
+      supplements,
+      follow_ups,
+      ...patch,
+    });
   const lines = (v: string) => v.split('\n').map((s) => s.trim()).filter(Boolean);
 
   return (
@@ -18,7 +33,7 @@ export function NoteEditor({ note, onChange }: { note: SessionNote; onChange: (n
       <Field label="Concerns">
         <textarea
           className="il-input il-input--area"
-          value={note.concerns.join('\n')}
+          value={concerns.join('\n')}
           onChange={(e) => set({ concerns: lines(e.target.value) })}
           placeholder="One concern per line"
         />
@@ -27,21 +42,21 @@ export function NoteEditor({ note, onChange }: { note: SessionNote; onChange: (n
       <Field label="Assessments">
         <textarea
           className="il-input il-input--area"
-          value={note.assessments.join('\n')}
+          value={assessments.join('\n')}
           onChange={(e) => set({ assessments: lines(e.target.value) })}
           placeholder="One assessment per line"
         />
       </Field>
 
       <Field label="Protocol changes">
-        {note.protocol_changes.map((c, i) => (
+        {protocol_changes.map((c, i) => (
           <div className="il-row" key={i}>
             <select
               className="il-input il-input--select"
               value={c.type}
               onChange={(e) =>
                 set({
-                  protocol_changes: note.protocol_changes.map((x, j) =>
+                  protocol_changes: protocol_changes.map((x, j) =>
                     j === i ? { ...x, type: e.target.value as ProtocolChange['type'] } : x,
                   ),
                 })
@@ -59,36 +74,36 @@ export function NoteEditor({ note, onChange }: { note: SessionNote; onChange: (n
               placeholder="Description"
               onChange={(e) =>
                 set({
-                  protocol_changes: note.protocol_changes.map((x, j) =>
+                  protocol_changes: protocol_changes.map((x, j) =>
                     j === i ? { ...x, description: e.target.value } : x,
                   ),
                 })
               }
             />
-            <button className="il-toggle" onClick={() => set({ protocol_changes: removeAt(note.protocol_changes, i) })}>
+            <button className="il-toggle" onClick={() => set({ protocol_changes: removeAt(protocol_changes, i) })}>
               ✕
             </button>
           </div>
         ))}
-        <Button variant="ghost" onClick={() => set({ protocol_changes: [...note.protocol_changes, { type: 'add', description: '' }] })}>
+        <Button variant="ghost" onClick={() => set({ protocol_changes: [...protocol_changes, { type: 'add', description: '' }] })}>
           + Add change
         </Button>
       </Field>
 
       <Field label="Supplements">
-        {note.supplements.map((s, i) => (
+        {supplements.map((s, i) => (
           <div className="il-row" key={i}>
             <input
               className="il-input"
               value={s.name}
               placeholder="Name"
-              onChange={(e) => set({ supplements: patchAt(note.supplements, i, { name: e.target.value }) })}
+              onChange={(e) => set({ supplements: patchAt(supplements, i, { name: e.target.value }) })}
             />
             <input
               className="il-input il-input--sm"
               value={s.dose ?? ''}
               placeholder="Dose"
-              onChange={(e) => set({ supplements: patchAt(note.supplements, i, { dose: e.target.value || null }) })}
+              onChange={(e) => set({ supplements: patchAt(supplements, i, { dose: e.target.value || null }) })}
             />
             <input
               className="il-input il-input--sm"
@@ -96,13 +111,13 @@ export function NoteEditor({ note, onChange }: { note: SessionNote; onChange: (n
               value={s.quantity ?? ''}
               placeholder="Qty"
               onChange={(e) =>
-                set({ supplements: patchAt(note.supplements, i, { quantity: e.target.value === '' ? null : Number(e.target.value) }) })
+                set({ supplements: patchAt(supplements, i, { quantity: e.target.value === '' ? null : Number(e.target.value) }) })
               }
             />
             <select
               className="il-input il-input--select"
               value={s.change}
-              onChange={(e) => set({ supplements: patchAt(note.supplements, i, { change: e.target.value as Supplement['change'] }) })}
+              onChange={(e) => set({ supplements: patchAt(supplements, i, { change: e.target.value as Supplement['change'] }) })}
             >
               {SUPP_CHANGES.map((c) => (
                 <option key={c} value={c}>
@@ -110,14 +125,14 @@ export function NoteEditor({ note, onChange }: { note: SessionNote; onChange: (n
                 </option>
               ))}
             </select>
-            <button className="il-toggle" onClick={() => set({ supplements: removeAt(note.supplements, i) })}>
+            <button className="il-toggle" onClick={() => set({ supplements: removeAt(supplements, i) })}>
               ✕
             </button>
           </div>
         ))}
         <Button
           variant="ghost"
-          onClick={() => set({ supplements: [...note.supplements, { name: '', dose: null, quantity: null, change: 'start' }] })}
+          onClick={() => set({ supplements: [...supplements, { name: '', dose: null, quantity: null, change: 'start' }] })}
         >
           + Add supplement
         </Button>
@@ -126,7 +141,7 @@ export function NoteEditor({ note, onChange }: { note: SessionNote; onChange: (n
       <Field label="Follow-ups">
         <textarea
           className="il-input il-input--area"
-          value={note.follow_ups.join('\n')}
+          value={follow_ups.join('\n')}
           onChange={(e) => set({ follow_ups: lines(e.target.value) })}
           placeholder="One follow-up per line"
         />
