@@ -320,3 +320,49 @@ declare global {
     innerlume: InnerlumeBridge;
   }
 }
+
+// --- Tasks + prep brief -------------------------------------------------------
+
+export type TaskStatus = 'open' | 'done' | 'dismissed';
+
+export interface Task {
+  id: string;
+  client_id: string;
+  client_name: string | null;
+  appointment_id: string | null;
+  title: string;
+  /** Null is normal: a follow-up with no spoken timeframe has no due date. */
+  due_date: string | null;
+  status: TaskStatus;
+  source: 'session' | 'manual';
+  created_at: string;
+  completed_at: string | null;
+}
+
+export interface BriefSupplement {
+  name: string;
+  dose: string | null;
+  qty: number | null;
+  due_date: string | null;
+  ordered: boolean;
+}
+
+export interface Brief {
+  client_id: string;
+  client_name: string;
+  appointment_id: string;
+  starts_at: string;
+  visit_number: number;
+  last_session: {
+    date: string;
+    concerns: string[];
+    assessments: string[];
+    protocol_changes: string[];
+    follow_ups: string[];
+  } | null;
+  open_tasks: Task[];
+  supplements: BriefSupplement[];
+  /** Fields last session never captured — her checklist for this visit. */
+  not_covered_last_time: string[];
+  outstanding_billing: { status: string; amount_cents: number; appointment_date: string } | null;
+}

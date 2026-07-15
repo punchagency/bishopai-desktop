@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Card } from '../components/Card';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
+import { InfoPopover } from '../components/InfoPopover';
 import { clearCustomerMap, fetchCustomerMap, setCustomerMap, syncCustomerMap } from '../lib/api';
 import type { CustomerMapData, CustomerSyncReport } from '../lib/types';
 
@@ -72,7 +73,31 @@ export function CustomerMapCard({ backendUrl }: { backendUrl: string }) {
     <Card
       title="QuickBooks customer mapping"
       meta={data ? `${mappedCount}/${total} clients mapped` : 'Loading…'}
-      actions={<Badge tone={configured ? 'accent' : 'neutral'}>{configured ? 'QuickBooks connected' : 'dry-run'}</Badge>}
+      actions={
+        <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <Badge tone={configured ? 'accent' : 'neutral'}>{configured ? 'QuickBooks connected' : 'dry-run'}</Badge>
+          <InfoPopover label="What is QuickBooks customer mapping?" title="How this works">
+            <p style={{ margin: '0 0 0.5rem' }}>
+              Every client here needs to be linked to their matching <strong>Customer</strong> record in
+              QuickBooks. When you approve a checkout, that link is how the app knows which QuickBooks
+              customer to charge and which books to post the payment against.
+            </p>
+            <p style={{ margin: '0 0 0.5rem' }}>
+              A client with no mapping can't be charged or reconciled automatically — their checkout gets
+              held for you to resolve by hand instead of guessing who to bill.
+            </p>
+            <p style={{ margin: '0 0 0.5rem' }}>
+              <strong>Sync from QuickBooks</strong> auto-links clients whose email or exact name matches a
+              QuickBooks customer — but only when the match is unambiguous. Anything with more than one
+              possible match is flagged below for you to pick, never guessed automatically.
+            </p>
+            <p style={{ margin: 0 }}>
+              Clients with no match at all (e.g. not yet a QuickBooks customer) can be linked by hand —
+              paste their QuickBooks customer id into the field next to their name.
+            </p>
+          </InfoPopover>
+        </span>
+      }
     >
       {offline ? (
         <p className="il-view__sub">Backend offline.</p>

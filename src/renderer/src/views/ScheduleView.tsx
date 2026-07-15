@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchSchedule } from '../lib/api';
 import { InfoPopover } from '../components/InfoPopover';
 import { Modal } from '../components/Modal';
+import { Skeleton } from '../components/Skeleton';
+import { BriefPanel } from '../components/BriefPanel';
 import type { ScheduleData, UpcomingSession } from '../lib/types';
 
 // ---------------------------------------------------------------------------
@@ -27,6 +29,7 @@ export function ScheduleView({ backendUrl }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<SelectedItem | null>(null);
+  const [briefFor, setBriefFor] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const load = useCallback(() => {
@@ -37,9 +40,9 @@ export function ScheduleView({ backendUrl }: Props) {
     setError(null);
 
     fetchSchedule(backendUrl, ac.signal)
-      .then(setData)
-      .catch((e: Error) => { if (e.name !== 'AbortError') setError(e.message); })
-      .finally(() => setLoading(false));
+      .then((d) => { if (abortRef.current === ac) setData(d); })
+      .catch((e: Error) => { if (e.name !== 'AbortError' && abortRef.current === ac) setError(e.message); })
+      .finally(() => { if (abortRef.current === ac) setLoading(false); });
   }, [backendUrl]);
 
   useEffect(() => {
@@ -47,7 +50,7 @@ export function ScheduleView({ backendUrl }: Props) {
     return () => abortRef.current?.abort();
   }, [load]);
 
-  if (loading) return <div className="il-empty">Loading schedule…</div>;
+  if (loading && !data) return <ScheduleSkeleton />;
   if (error)   return <div className="il-empty il-empty--error">⚠ {error}</div>;
   if (!data)   return null;
 
@@ -356,7 +359,19 @@ export function ScheduleView({ backendUrl }: Props) {
           title={selectedItem.type === 'session' ? 'Session Details' : 'Available Booking Slot'}
           onClose={() => setSelectedItem(null)}
           footer={
-            <div className="il-modal__actions" style={{ justifyContent: 'flex-end', width: '100%' }}>
+            <div className="il-modal__actions" style={{ justifyContent: 'flex-end', width: '100%', gap: '0.5rem' }}>
+              {selectedItem.type === 'session' && (
+                <button
+                  className="il-button il-button--primary"
+                  onClick={() => {
+                    const id = selectedItem.data.id;
+                    setSelectedItem(null);
+                    setBriefFor(id);
+                  }}
+                >
+                  Prep brief
+                </button>
+              )}
               <button className="il-button il-button--secondary" onClick={() => setSelectedItem(null)}>
                 Close
               </button>
@@ -374,6 +389,86 @@ export function ScheduleView({ backendUrl }: Props) {
           )}
         </Modal>
       )}
+
+      {briefFor && (
+        <BriefPanel backendUrl={backendUrl} appointmentId={briefFor} onClose={() => setBriefFor(null)} />
+      )}
+    </div>
+  );
+}
+
+// --- Loading skeleton --------------------------------------------------------
+// Mirrors the real calendar shell (header + day-head row + hours column + day
+// columns) so the swap to loaded content lands in place instead of popping.
+// A few event-shaped blocks per column hint at where sessions will appear.
+function ScheduleSkeleton() {
+  const DAY_COUNT = 5;
+  const HOURS = Array.from({ length: 9 }); // ~9 hour rows
+  const cols = `60px repeat(${DAY_COUNT}, 1fr)`;
+
+  // Deterministic pseudo-placement so the shimmer blocks don't jitter on re-render.
+  const events: Record<number, { top: number; height: number }[]> = {
+    0: [{ top: 30, height: 55 }, { top: 200, height: 40 }],
+    1: [{ top: 90, height: 70 }],
+    2: [{ top: 15, height: 45 }, { top: 150, height: 55 }, { top: 320, height: 40 }],
+    3: [{ top: 120, height: 60 }],
+    4: [{ top: 60, height: 50 }, { top: 250, height: 65 }],
+  };
+
+  return (
+    <div className="il-schedule" aria-busy="true">
+      <header className="il-schedule__header">
+        <div>
+          <Skeleton width="9rem" height="1.6rem" />
+          <div style={{ marginTop: '0.55rem' }}>
+            <Skeleton width="24rem" height="0.8rem" />
+          </div>
+        </div>
+      </header>
+
+      <div className="il-calendar">
+        <div className="il-calendar__header-days" style={{ gridTemplateColumns: cols }}>
+          <div className="il-calendar__header-spacer" />
+          {Array.from({ length: DAY_COUNT }).map((_, i) => (
+            <div key={i} className="il-calendar__day-head">
+              <Skeleton width="2.4rem" height="0.7rem" />
+              <div style={{ marginTop: '0.35rem' }}>
+                <Skeleton width="3.2rem" height="1.1rem" />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="il-calendar__body-scroll">
+          <div className="il-calendar__grid-wrapper" style={{ gridTemplateColumns: cols }}>
+            <div className="il-calendar__hours-col">
+              {HOURS.map((_, h) => (
+                <div key={h} className="il-calendar__hour-slot">
+                  <Skeleton width="2.4rem" height="0.7rem" />
+                </div>
+              ))}
+            </div>
+
+            {Array.from({ length: DAY_COUNT }).map((_, i) => (
+              <div key={i} className="il-calendar__day-col">
+                <div className="il-calendar__grid-lines">
+                  {HOURS.map((_, h) => (
+                    <div key={h} className="il-calendar__grid-line-row" />
+                  ))}
+                </div>
+                {(events[i] ?? []).map((ev, j) => (
+                  <div
+                    key={j}
+                    style={{ position: 'absolute', left: 4, right: 4, top: ev.top, zIndex: 2 }}
+                  >
+                    <Skeleton width="100%" height={`${ev.height}px`} radius="var(--radius-sm)" />
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

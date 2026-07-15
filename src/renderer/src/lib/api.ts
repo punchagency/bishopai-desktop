@@ -378,3 +378,31 @@ export function sendRefillOrders(backendUrl: string, refillIds: string[]): Promi
     body: JSON.stringify({ refill_ids: refillIds }),
   });
 }
+
+// --- Tasks + prep brief -------------------------------------------------------
+
+/** Nicole's open follow-ups, promoted from session notes on approval. */
+export function fetchTasks(backendUrl: string, signal?: AbortSignal): Promise<{ tasks: import('./types').Task[] }> {
+  return json(`${backendUrl}/tasks`, { signal });
+}
+
+export function updateTask(
+  backendUrl: string,
+  id: string,
+  status: import('./types').TaskStatus,
+): Promise<import('./types').Task> {
+  return json(`${backendUrl}/tasks/${id}`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ status }),
+  });
+}
+
+/** Pre-session prep brief for one appointment. */
+export function fetchBrief(
+  backendUrl: string,
+  appointmentId: string,
+  signal?: AbortSignal,
+): Promise<import('./types').Brief> {
+  return json(`${backendUrl}/appointments/${appointmentId}/brief`, { signal });
+}

@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { StatCard } from '../components/StatCard';
 import { Feed, type FeedRow } from '../components/Feed';
-import { fetchOverview } from '../lib/api';
-import type { CourierStatus, Overview as OverviewData, ViewKey } from '../lib/types';
+import { Badge } from '../components/Badge';
+import { Skeleton } from '../components/Skeleton';
+import { fetchOverview, fetchTasks, updateTask } from '../lib/api';
+import type { CourierStatus, Overview as OverviewData, Task, TaskStatus, ViewKey } from '../lib/types';
 
 const SAMPLE: OverviewData = {
   stats: { awaiting_review: 2, unmatched: 2, upcoming: 3, approved_today: 1 },
@@ -86,13 +88,107 @@ export function Overview({ backendUrl, courier, onNavigate }: Props) {
       </div>
 
       <div className="il-cols">
-        <Feed title="Recent activity" rows={activityRows} empty="No activity yet." />
+        <div className="il-cols__stack">
+          <TasksCard backendUrl={backendUrl} />
+          <Feed title="Recent activity" rows={activityRows} empty="No activity yet." />
+        </div>
         <div className="il-cols__stack">
           <Feed title="Notifications" rows={notes} />
           <Feed title="Upcoming" rows={upcomingRows} empty="No upcoming sessions." />
         </div>
       </div>
     </section>
+  );
+}
+
+/**
+ * Follow-ups Nicole committed to in session, now tracked. They arrive here only
+ * once she has approved the note they came from. Ticking one off is the only write
+ * — nothing on this card contacts a client.
+ */
+function TasksCard({ backendUrl }: { backendUrl: string }) {
+  const [tasks, setTasks] = useState<Task[] | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  useEffect(() => {
+    const ctrl = new AbortController();
+    fetchTasks(backendUrl, ctrl.signal)
+      .then((r) => setTasks(r.tasks))
+      .catch(() => setTasks([]));
+    return () => ctrl.abort();
+  }, [backendUrl]);
+
+  const resolve = async (id: string, status: TaskStatus) => {
+    setBusy(id);
+    try {
+      await updateTask(backendUrl, id, status);
+      setTasks((cur) => (cur ?? []).filter((t) => t.id !== id));
+    } catch {
+      setBusy(null); // leave it in place; the next load will re-sync
+      return;
+    }
+    setBusy(null);
+  };
+
+  const today = new Date().toISOString().slice(0, 10);
+  const overdue = (tasks ?? []).filter((t) => t.due_date && t.due_date < today).length;
+
+  return (
+    <div className="il-card">
+      <h3 className="il-card__title">
+        Follow-ups{overdue > 0 && <Badge tone="warning"> {overdue} overdue</Badge>}
+      </h3>
+
+      {tasks === null && (
+        <div style={{ display: 'grid', gap: '0.6rem', marginTop: '0.7rem' }}>
+          {[85, 65, 75].map((w, i) => (
+            <Skeleton key={i} width={`${w}%`} height="1rem" />
+          ))}
+        </div>
+      )}
+
+      {tasks?.length === 0 && (
+        <p className="il-card__meta" style={{ marginTop: '0.6rem' }}>
+          Nothing outstanding. Follow-ups appear here once you approve the session note they came from.
+        </p>
+      )}
+
+      {tasks && tasks.length > 0 && (
+        <ul className="il-feed">
+          {tasks.map((t) => {
+            const isOverdue = t.due_date !== null && t.due_date < today;
+            return (
+              <li key={t.id} className="il-feed__row" style={{ opacity: busy === t.id ? 0.5 : 1 }}>
+                <span className={`il-dot il-dot--${isOverdue ? 'warning' : 'neutral'}`} />
+                <span className="il-feed__title">
+                  {t.title}
+                  {t.client_name && <span className="il-card__meta"> · {t.client_name}</span>}
+                </span>
+                <span className="il-feed__meta" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  {t.due_date ? (isOverdue ? `overdue ${t.due_date}` : t.due_date) : 'no date'}
+                  <button
+                    className="il-btn il-btn--ghost"
+                    disabled={busy === t.id}
+                    title="Mark done"
+                    onClick={() => void resolve(t.id, 'done')}
+                  >
+                    Done
+                  </button>
+                  <button
+                    className="il-btn il-btn--ghost"
+                    disabled={busy === t.id}
+                    title="Dismiss — it no longer applies"
+                    onClick={() => void resolve(t.id, 'dismissed')}
+                  >
+                    Dismiss
+                  </button>
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
   );
 }
 
