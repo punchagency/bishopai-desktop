@@ -15,21 +15,45 @@
     "package:dir": "electron-vite build && electron-builder --dir"
   },
   "dependencies": {
-    "@beeai/cli": "^0.7.3"
+    "@beeai/cli": "^0.7.3",
+    "marked": "^18.0.6"
   },
   "build": {
     "appId": "health.innerlume.desktop",
     "productName": "Innerlume",
-    "directories": { "output": "release", "buildResources": "build" },
-    "files": ["out/**/*", "package.json", "innerlume.config.json"],
-    "asarUnpack": ["node_modules/@beeai/cli/**/*"],
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "out/**/*",
+      "package.json",
+      "innerlume.config.json"
+    ],
+    "asarUnpack": [
+      "node_modules/@beeai/cli/**/*"
+    ],
     "mac": {
-      "target": [{ "target": "dmg", "arch": ["universal"] }],
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
       "category": "public.app-category.medical",
       "icon": "build/icon.png"
     },
-    "win": { "target": "nsis", "icon": "build/icon.png" },
-    "linux": { "target": "AppImage", "category": "Office", "icon": "build/icon.png" }
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.png"
+    },
+    "linux": {
+      "target": "AppImage",
+      "category": "Office",
+      "icon": "build/icon.png"
+    }
   },
   "devDependencies": {
     "@types/node": "^20.14.0",

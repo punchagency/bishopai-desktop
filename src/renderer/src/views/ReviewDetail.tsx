@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { marked } from 'marked';
 import { Modal } from '../components/Modal';
 import { Button } from '../components/Button';
 import { Badge } from '../components/Badge';
@@ -120,7 +121,12 @@ export function ReviewDetail({ backendUrl, kind, id, clientName, onClose, onChan
       </div>
 
       {tab === 'preview' ? (
-        <pre className="il-markdown">{markdown || 'Loading…'}</pre>
+        markdown
+          ? <div
+              className="il-prose"
+              dangerouslySetInnerHTML={{ __html: marked.parse(markdown) as string }}
+            />
+          : <p className="il-empty">Loading…</p>
       ) : note ? (
         <NoteEditor note={note} onChange={setNote} />
       ) : (

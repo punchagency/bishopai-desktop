@@ -51,12 +51,17 @@ export interface Supplement {
   quantity: number | null;
   change: SupplementChange;
 }
+export interface FollowUp {
+  text: string;
+  due_in_days: number | null;
+}
 export interface SessionNote {
   concerns: string[];
   assessments: string[];
   protocol_changes: ProtocolChange[];
   supplements: Supplement[];
-  follow_ups: string[];
+  /** Legacy notes stored plain strings; post-task extraction stores objects. */
+  follow_ups: (string | FollowUp)[];
 }
 
 export type ReviewKind = 'sheets' | 'protocols';

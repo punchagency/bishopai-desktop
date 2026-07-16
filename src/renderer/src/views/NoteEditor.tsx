@@ -16,6 +16,12 @@ export function NoteEditor({ note, onChange }: { note: SessionNote; onChange: (n
   const supplements = note?.supplements || [];
   const follow_ups = note?.follow_ups || [];
 
+  // follow_ups is a union of plain strings (legacy) and {text, due_in_days} objects.
+  // Flatten to plain strings for the textarea; reconstruct objects on edit.
+  const followUpStrings = follow_ups.map((f) =>
+    typeof f === 'string' ? f : f.text,
+  );
+
   const set = (patch: Partial<SessionNote>) =>
     onChange({
       ...note,
@@ -141,8 +147,18 @@ export function NoteEditor({ note, onChange }: { note: SessionNote; onChange: (n
       <Field label="Follow-ups">
         <textarea
           className="il-input il-input--area"
-          value={follow_ups.join('\n')}
-          onChange={(e) => set({ follow_ups: lines(e.target.value) })}
+          value={followUpStrings.join('\n')}
+          onChange={(e) =>
+            set({
+              follow_ups: lines(e.target.value).map((text, i) => ({
+                text,
+                due_in_days:
+                  typeof follow_ups[i] === 'object' && follow_ups[i] !== null
+                    ? (follow_ups[i] as { due_in_days: number | null }).due_in_days
+                    : null,
+              })),
+            })
+          }
           placeholder="One follow-up per line"
         />
       </Field>

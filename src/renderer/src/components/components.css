@@ -883,10 +883,19 @@
   justify-content: center;
 }
 
+.il-schedule {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
 /* Premium Weekly Calendar View */
 .il-calendar {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-height: 0;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -937,7 +946,8 @@
 }
 
 .il-calendar__body-scroll {
-  max-height: 520px;
+  flex: 1;
+  min-height: 320px;
   overflow-y: auto;
   position: relative;
 }

@@ -294,6 +294,7 @@ h3 {
   margin: 0 0 0.8rem;
   display: -webkit-box;
   -webkit-line-clamp: 3;
+  line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -342,4 +343,154 @@ h3 {
   text-align: center;
   padding: 3rem 0;
   font-size: 0.95rem;
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+.il-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1.1rem;
+  border-radius: var(--radius-md);
+  border: none;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.1s ease;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.il-button:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+.il-button:active {
+  transform: translateY(1px);
+}
+
+/* Primary — terracotta accent */
+.il-button--primary {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.il-button--primary:hover {
+  background: var(--accent-hover);
+  box-shadow: var(--shadow-sm);
+}
+.il-button--primary:active {
+  background: var(--accent-active);
+}
+
+/* Secondary — muted surface */
+.il-button--secondary {
+  background: var(--surface-2);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+.il-button--secondary:hover {
+  background: var(--border);
+  color: var(--text);
+}
+
+/* Success — green confirmation state */
+.il-button--success {
+  background: color-mix(in srgb, var(--success) 18%, transparent);
+  color: var(--success);
+  border: 1px solid color-mix(in srgb, var(--success) 35%, transparent);
+}
+.il-button--success:hover {
+  background: color-mix(in srgb, var(--success) 28%, transparent);
+}
+
+/* Ghost — transparent, accent text */
+.il-button--ghost {
+  background: transparent;
+  color: var(--accent-active);
+  border: 1px solid var(--border);
+}
+.il-button--ghost:hover {
+  background: var(--accent-soft);
+}
+
+/* ── Prose (rendered markdown — Review preview panel) ─────────────────────── */
+.il-prose {
+  font-size: 0.9rem;
+  line-height: 1.65;
+  color: var(--text);
+  padding: 0.25rem 0.1rem;
+}
+.il-prose h1 {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 0.15rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 2px solid var(--border);
+}
+.il-prose h2 {
+  font-family: var(--font-heading);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--accent-active);
+  margin: 1.2rem 0 0.4rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.il-prose p {
+  margin: 0.3rem 0;
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: 0.83rem;
+}
+.il-prose ul {
+  margin: 0.2rem 0 0.6rem;
+  padding-left: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.il-prose li {
+  color: var(--text);
+}
+.il-prose li strong {
+  color: var(--accent-active);
+  font-weight: 700;
+}
+.il-prose em {
+  color: var(--text-muted);
+  font-style: italic;
+}
+/* Supplement table */
+.il-prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.83rem;
+  margin: 0.4rem 0 0.8rem;
+}
+.il-prose th {
+  text-align: left;
+  padding: 0.4rem 0.6rem;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border);
+}
+.il-prose td {
+  padding: 0.45rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+.il-prose tr:last-child td {
+  border-bottom: none;
+}
+.il-prose tr:hover td {
+  background: var(--surface-2);
 }
