@@ -43,6 +43,7 @@ interface Selection {
   kind: ReviewKind;
   id: string;
   clientName: string;
+  clientId: string | null;
 }
 
 export function ReviewQueue({ backendUrl, onChanged }: { backendUrl: string; onChanged?: () => void }) {
@@ -122,7 +123,7 @@ export function ReviewQueue({ backendUrl, onChanged }: { backendUrl: string; onC
             actions={<Badge tone="accent">{humanize(s.status)}</Badge>}
           >
             <div className="il-card__row">
-              <Button variant="ghost" onClick={() => setSelected({ kind: 'sheets', id: s.id, clientName: s.client_name ?? 'Unknown client' })}>
+              <Button variant="ghost" onClick={() => setSelected({ kind: 'sheets', id: s.id, clientName: s.client_name ?? 'Unknown client', clientId: s.client_id })}>
                 Open
               </Button>
               <Button variant="primary" disabled={pending === s.id} onClick={() => approve('sheets', s.id)}>
@@ -140,7 +141,7 @@ export function ReviewQueue({ backendUrl, onChanged }: { backendUrl: string; onC
             actions={<Badge tone="neutral">{humanize(p.status)}</Badge>}
           >
             <div className="il-card__row">
-              <Button variant="ghost" onClick={() => setSelected({ kind: 'protocols', id: p.id, clientName: p.client_name ?? 'Unknown client' })}>
+              <Button variant="ghost" onClick={() => setSelected({ kind: 'protocols', id: p.id, clientName: p.client_name ?? 'Unknown client', clientId: p.client_id })}>
                 Open
               </Button>
               <Button variant="primary" disabled={pending === p.id} onClick={() => approve('protocols', p.id)}>
@@ -164,6 +165,7 @@ export function ReviewQueue({ backendUrl, onChanged }: { backendUrl: string; onC
           kind={selected.kind}
           id={selected.id}
           clientName={selected.clientName}
+          clientId={selected.clientId}
           onClose={() => setSelected(null)}
           onChanged={() => {
             load();

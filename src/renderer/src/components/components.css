@@ -376,6 +376,119 @@
   align-items: center;
   margin-bottom: 0.45rem;
 }
+
+/* Flow Sheet review panel — a read-only, template-shaped preview of the
+   session's Appointment Flow Sheet block, side by side with the prior one. */
+.il-flowsheet {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+@media (max-width: 720px) {
+  .il-flowsheet {
+    grid-template-columns: 1fr;
+  }
+}
+.il-flowsheet__block {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+.il-flowsheet__block--empty {
+  align-items: flex-start;
+}
+.il-flowsheet__blockTitle {
+  font-family: var(--font-heading);
+  font-size: 0.92rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+.il-flowsheet__date {
+  font-family: var(--font-body);
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+.il-flowsheet__row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.il-flowsheet__label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.il-flowsheet__value {
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+  color: var(--text);
+}
+.il-flowsheet__value--blank {
+  color: var(--text-muted);
+  font-style: italic;
+}
+.il-flowsheet__lifestyle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem 0.9rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.5rem;
+}
+
+/* Supplement Protocol review panel */
+.il-suppgrid {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+.il-suppgrid__section h4 {
+  margin: 0 0 0.5rem;
+  font-family: var(--font-heading);
+  font-size: 0.88rem;
+}
+.il-suppgrid__section--muted {
+  opacity: 0.85;
+}
+.il-suppgrid__inline {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+.il-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.il-table th {
+  text-align: left;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  padding: 0.4rem 0.5rem;
+}
+.il-table td {
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+.il-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+}
 .il-error {
   color: var(--danger);
   font-size: 0.8rem;

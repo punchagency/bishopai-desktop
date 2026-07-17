@@ -1,8 +1,15 @@
-import type { ProtocolChange, SessionNote, Supplement } from '../lib/types';
+import type { Lifestyle, NrtFindings, ProtocolChange, SessionNote, Supplement } from '../lib/types';
 import { Button } from '../components/Button';
 
 const CHANGE_TYPES: ProtocolChange['type'][] = ['add', 'remove', 'adjust', 'continue'];
 const SUPP_CHANGES: Supplement['change'][] = ['start', 'stop', 'increase', 'decrease', 'continue'];
+
+// Every one of these fields lands directly on the ROF and the Flow Sheet. A
+// null here means the transcript never stated it — that's correct, not a bug —
+// so it gets a distinct "not stated" placeholder rather than looking like an
+// empty, possibly-broken input.
+const NOT_STATED = 'Not stated in transcript — fill in if needed';
+const NOT_MENTIONED = 'Not mentioned';
 
 /**
  * Structured editor for a SessionNote — the content_json behind a sheet/protocol.
@@ -15,6 +22,22 @@ export function NoteEditor({ note, onChange }: { note: SessionNote; onChange: (n
   const protocol_changes = note?.protocol_changes || [];
   const supplements = note?.supplements || [];
   const follow_ups = note?.follow_ups || [];
+  const nrt: NrtFindings = note?.nrt ?? {
+    pulse0: null,
+    priority1: null,
+    k27: null,
+    stressors: null,
+    foundation: null,
+    body_scan: null,
+  };
+  const lifestyle: Lifestyle = note?.lifestyle ?? {
+    bm: null,
+    sleep: null,
+    water: null,
+    cycle: null,
+    exercise: null,
+    diet: null,
+  };
 
   // follow_ups is a union of plain strings (legacy) and {text, due_in_days} objects.
   // Flatten to plain strings for the textarea; reconstruct objects on edit.
@@ -52,6 +75,76 @@ export function NoteEditor({ note, onChange }: { note: SessionNote; onChange: (n
           onChange={(e) => set({ assessments: lines(e.target.value) })}
           placeholder="One assessment per line"
         />
+      </Field>
+
+      <Field label="NRT findings — Pulse 0 / Priority #1 / K-27 / Stressors">
+        <div className="il-row">
+          <input
+            className="il-input"
+            value={nrt.pulse0 ?? ''}
+            placeholder={NOT_STATED}
+            onChange={(e) => set({ nrt: { ...nrt, pulse0: e.target.value || null } })}
+          />
+          <input
+            className="il-input"
+            value={nrt.priority1 ?? ''}
+            placeholder={NOT_STATED}
+            onChange={(e) => set({ nrt: { ...nrt, priority1: e.target.value || null } })}
+          />
+        </div>
+        <div className="il-row">
+          <input
+            className="il-input"
+            value={nrt.k27 ?? ''}
+            placeholder={NOT_STATED}
+            onChange={(e) => set({ nrt: { ...nrt, k27: e.target.value || null } })}
+          />
+          <input
+            className="il-input"
+            value={nrt.stressors ?? ''}
+            placeholder={NOT_STATED}
+            onChange={(e) => set({ nrt: { ...nrt, stressors: e.target.value || null } })}
+          />
+        </div>
+      </Field>
+
+      <Field label="Foundation (Flow Sheet FOUNDATION column)">
+        <textarea
+          className="il-input il-input--area"
+          value={nrt.foundation ?? ''}
+          placeholder={NOT_STATED}
+          onChange={(e) => set({ nrt: { ...nrt, foundation: e.target.value || null } })}
+        />
+      </Field>
+
+      <Field label="Body scan (Flow Sheet BODY SCAN column)">
+        <textarea
+          className="il-input il-input--area"
+          value={nrt.body_scan ?? ''}
+          placeholder={NOT_STATED}
+          onChange={(e) => set({ nrt: { ...nrt, body_scan: e.target.value || null } })}
+        />
+      </Field>
+
+      <Field label="Lifestyle log — BM / Sleep / Water / Cycle / Exercise / Diet">
+        <div className="il-row">
+          <input className="il-input" value={lifestyle.bm ?? ''} placeholder={`BM — ${NOT_MENTIONED}`}
+            onChange={(e) => set({ lifestyle: { ...lifestyle, bm: e.target.value || null } })} />
+          <input className="il-input" value={lifestyle.sleep ?? ''} placeholder={`Sleep — ${NOT_MENTIONED}`}
+            onChange={(e) => set({ lifestyle: { ...lifestyle, sleep: e.target.value || null } })} />
+        </div>
+        <div className="il-row">
+          <input className="il-input" value={lifestyle.water ?? ''} placeholder={`Water — ${NOT_MENTIONED}`}
+            onChange={(e) => set({ lifestyle: { ...lifestyle, water: e.target.value || null } })} />
+          <input className="il-input" value={lifestyle.cycle ?? ''} placeholder={`Cycle — ${NOT_MENTIONED}`}
+            onChange={(e) => set({ lifestyle: { ...lifestyle, cycle: e.target.value || null } })} />
+        </div>
+        <div className="il-row">
+          <input className="il-input" value={lifestyle.exercise ?? ''} placeholder={`Exercise — ${NOT_MENTIONED}`}
+            onChange={(e) => set({ lifestyle: { ...lifestyle, exercise: e.target.value || null } })} />
+          <input className="il-input" value={lifestyle.diet ?? ''} placeholder={`Diet — ${NOT_MENTIONED}`}
+            onChange={(e) => set({ lifestyle: { ...lifestyle, diet: e.target.value || null } })} />
+        </div>
       </Field>
 
       <Field label="Protocol changes">

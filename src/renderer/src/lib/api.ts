@@ -12,6 +12,7 @@ import type {
   Overview,
   RefillDigest,
   RefillSendResponse,
+  ReviewContext,
   ReviewKind,
   ReviewQueue,
   ScheduleData,
@@ -125,6 +126,11 @@ export function fetchItem(backendUrl: string, kind: ReviewKind, id: string): Pro
 /** Server-rendered Markdown of the document as it stands. */
 export function fetchRendered(backendUrl: string, kind: ReviewKind, id: string): Promise<{ markdown: string }> {
   return json<{ markdown: string }>(`${backendUrl}/review/${kind}/${id}/render`);
+}
+
+/** The client's prior approved note + running supplement plan, for comparison. */
+export function fetchReviewContext(backendUrl: string, kind: ReviewKind, id: string): Promise<ReviewContext> {
+  return json<ReviewContext>(`${backendUrl}/review/${kind}/${id}/context`);
 }
 
 /** Save edits to content_json (and/or status). */

@@ -3,25 +3,29 @@ import { marked } from 'marked';
 import { Modal } from '../components/Modal';
 import { Button } from '../components/Button';
 import { Badge } from '../components/Badge';
-import { approveItem, fetchItem, fetchRendered, patchItem } from '../lib/api';
-import type { ReviewKind, SessionNote } from '../lib/types';
+import { approveItem, fetchItem, fetchRendered, fetchReviewContext, patchItem } from '../lib/api';
+import type { ReviewContext, ReviewKind, SessionNote } from '../lib/types';
 import { NoteEditor } from './NoteEditor';
+import { FlowSheetPanel } from './FlowSheetPanel';
+import { SupplementProtocolPanel } from './SupplementProtocolPanel';
 
 interface Props {
   backendUrl: string;
   kind: ReviewKind;
   id: string;
   clientName: string;
+  clientId: string | null;
   onClose: () => void;
   onChanged: () => void; // refresh the queue after save/approve
 }
 
-type Tab = 'preview' | 'edit';
+type Tab = 'preview' | 'edit' | 'flowsheet' | 'supplement';
 
 export function ReviewDetail({ backendUrl, kind, id, clientName, onClose, onChanged }: Props) {
   const [tab, setTab] = useState<Tab>('preview');
   const [note, setNote] = useState<SessionNote | null>(null);
   const [markdown, setMarkdown] = useState<string>('');
+  const [context, setContext] = useState<ReviewContext | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isSample = id.startsWith('sample-');
@@ -46,6 +50,9 @@ export function ReviewDetail({ backendUrl, kind, id, clientName, onClose, onChan
       .then((row) => setNote(row.content_json))
       .catch((e) => setError(String(e)));
     loadPreview();
+    fetchReviewContext(backendUrl, kind, id)
+      .then(setContext)
+      .catch(() => setContext(null)); // comparison panels just show less — never block the review
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [backendUrl, kind, id]);
 
@@ -117,21 +124,43 @@ export function ReviewDetail({ backendUrl, kind, id, clientName, onClose, onChan
         <button className={`il-tab ${tab === 'edit' ? 'il-tab--on' : ''}`} onClick={() => setTab('edit')}>
           Edit
         </button>
+        <button className={`il-tab ${tab === 'flowsheet' ? 'il-tab--on' : ''}`} onClick={() => setTab('flowsheet')}>
+          Flow Sheet
+        </button>
+        <button className={`il-tab ${tab === 'supplement' ? 'il-tab--on' : ''}`} onClick={() => setTab('supplement')}>
+          Supplement Protocol
+        </button>
         {isSample && <Badge tone="warning">offline sample</Badge>}
       </div>
 
-      {tab === 'preview' ? (
-        markdown
+      {tab === 'preview' &&
+        (markdown
           ? <div
               className="il-prose"
               dangerouslySetInnerHTML={{ __html: marked.parse(markdown) as string }}
             />
-          : <p className="il-empty">Loading…</p>
-      ) : note ? (
-        <NoteEditor note={note} onChange={setNote} />
-      ) : (
-        <p className="il-empty">Loading…</p>
-      )}
+          : <p className="il-empty">Loading…</p>)}
+
+      {tab === 'edit' &&
+        (note
+          ? <NoteEditor note={note} onChange={setNote} />
+          : <p className="il-empty">Loading…</p>)}
+
+      {tab === 'flowsheet' &&
+        (note
+          ? <FlowSheetPanel note={note} prior={context?.prior.sheet ?? context?.prior.protocol ?? null} />
+          : <p className="il-empty">Loading…</p>)}
+
+      {tab === 'supplement' &&
+        (note
+          ? (
+            <SupplementProtocolPanel
+              plan={context?.supplementPlan ?? null}
+              note={note}
+              priorProtocol={context?.prior.protocol?.note ?? null}
+            />
+          )
+          : <p className="il-empty">Loading…</p>)}
     </Modal>
   );
 }

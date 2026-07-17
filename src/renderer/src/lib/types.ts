@@ -55,16 +55,65 @@ export interface FollowUp {
   text: string;
   due_in_days: number | null;
 }
+// Nutrition Response Testing findings — feed the ROF's NRT block and the Flow
+// Sheet's FOUNDATION/BODY SCAN columns. Null means the transcript never stated
+// it; that's correct and expected, never a bug to paper over.
+export interface NrtFindings {
+  pulse0: string | null;
+  priority1: string | null;
+  k27: string | null;
+  stressors: string | null;
+  foundation: string | null;
+  body_scan: string | null;
+}
+// The Flow Sheet's lifestyle log (column B). Same null-means-not-mentioned rule.
+export interface Lifestyle {
+  bm: string | null;
+  sleep: string | null;
+  water: string | null;
+  cycle: string | null;
+  exercise: string | null;
+  diet: string | null;
+}
 export interface SessionNote {
   concerns: string[];
+  goals?: string[];
   assessments: string[];
   protocol_changes: ProtocolChange[];
   supplements: Supplement[];
   /** Legacy notes stored plain strings; post-task extraction stores objects. */
   follow_ups: (string | FollowUp)[];
+  nrt?: NrtFindings;
+  lifestyle?: Lifestyle;
 }
 
 export type ReviewKind = 'sheets' | 'protocols';
+
+// GET /review/:kind/:id/context (server/src/routes/review.ts) — what's already
+// on file for this client, so Nicole can compare the draft against it instead
+// of approving blind.
+export interface SupplementPlanRow {
+  name: string;
+  dose: string | null;
+  qty: number | null;
+}
+export interface PriorNote {
+  date: string;
+  note: SessionNote;
+}
+export interface ReviewContext {
+  client_id: string | null;
+  prior: {
+    sheet: PriorNote | null;
+    protocol: PriorNote | null;
+  };
+  supplementPlan: {
+    /** The running plan as it stands right now, before this draft is approved. */
+    current: SupplementPlanRow[];
+    /** What the plan would become if this draft were approved as-is. */
+    merged: SupplementPlanRow[];
+  };
+}
 
 export interface UnmatchedConversation {
   id: string;
