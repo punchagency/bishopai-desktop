@@ -94,6 +94,9 @@ export interface Supplement {
   /** "Here" or "Fullscript" — where the client obtains it. Distinct from the
    *  plan row's `source`, which is provenance and never shown to a client. */
   obtained_from?: string | null;
+  /** The ROF's "Function" column — what this supplement is for, in the client's
+   *  terms. Practitioner knowledge, so usually written during review. */
+  func?: string | null;
 }
 export interface FollowUp {
   text: string;

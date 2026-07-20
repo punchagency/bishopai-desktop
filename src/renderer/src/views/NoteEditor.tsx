@@ -246,6 +246,15 @@ export function NoteEditor({
                 set({ supplements: patchAt(supplements, i, { quantity: e.target.value === '' ? null : Number(e.target.value) }) })
               }
             />
+            {/* The ROF's Function column. Left blank it prints an empty cell on
+                the client's Report of Findings, which is honest but unhelpful —
+                this is where it gets written. */}
+            <input
+              className="il-input"
+              value={s.func ?? ''}
+              placeholder="What it's for (ROF)"
+              onChange={(e) => set({ supplements: patchAt(supplements, i, { func: e.target.value || null }) })}
+            />
             <select
               className="il-input il-input--select"
               value={s.change}
