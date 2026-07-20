@@ -27,6 +27,9 @@ export interface ReviewProtocol {
   status: 'draft' | 'in_review' | 'approved';
   updated_at: string;
   appointment_id: string;
+  /** Session date. Prefer this over updated_at, which is when the row was written. */
+  starts_at?: string;
+  ends_at?: string;
   client_id: string | null;
   client_name: string | null;
   content_json: Record<string, unknown>;
@@ -45,11 +48,33 @@ export interface ProtocolChange {
   description: string;
   type: ProtocolChangeType;
 }
+/** Dosing slots on the Supplement Protocol's Daily Schedule grid (cols D–J).
+ *  A slot is filled only when the timing was actually spoken. */
+export interface DosingSchedule {
+  uponWaking: string | null;
+  breakfast: string | null;
+  midMorning: string | null;
+  lunch: string | null;
+  midAfternoon: string | null;
+  dinner: string | null;
+  beforeBed: string | null;
+}
+export const SCHEDULE_SLOTS: { key: keyof DosingSchedule; label: string }[] = [
+  { key: 'uponWaking', label: 'Upon Waking' },
+  { key: 'breakfast', label: 'Breakfast' },
+  { key: 'midMorning', label: 'Mid-Morning' },
+  { key: 'lunch', label: 'Lunch' },
+  { key: 'midAfternoon', label: 'Mid-Afternoon' },
+  { key: 'dinner', label: 'Dinner' },
+  { key: 'beforeBed', label: 'Before Bed' },
+];
+
 export interface Supplement {
   name: string;
   dose: string | null;
   quantity: number | null;
   change: SupplementChange;
+  schedule?: DosingSchedule | null;
 }
 export interface FollowUp {
   text: string;
@@ -58,13 +83,44 @@ export interface FollowUp {
 // Nutrition Response Testing findings — feed the ROF's NRT block and the Flow
 // Sheet's FOUNDATION/BODY SCAN columns. Null means the transcript never stated
 // it; that's correct and expected, never a bug to paper over.
+// The FOUNDATION column (D) of the Flow Sheet: a fixed list of muscle-testing
+// prompts Nicole works down in order. One field per prompt, so the review screen
+// can show a called result against an uncalled one instead of a single blob.
+// Legacy notes stored one string here; the server parks it in `additional`.
+export interface FoundationFindings {
+  laying1: string | null;
+  standing: string | null;
+  hta: string | null;
+  hta_post_run: string | null;
+  laying2: string | null;
+  art_open: string | null;
+  art_switch: string | null;
+  art_cns: string | null;
+  art_dental: string | null;
+  art_hormonal: string | null;
+  additional: string | null;
+}
+// The BODY SCAN column (E): two passes — ART with polarity, then NRT without —
+// each with its own PRIORITY / MATRIX / CELL readings. Kept separate because
+// Nicole compares the two passes against each other.
+export interface BodyScanFindings {
+  art_ectoderm: string | null;
+  art_priority: string | null;
+  art_matrix: string | null;
+  art_cell: string | null;
+  additional_art: string | null;
+  scan_priority: string | null;
+  scan_matrix: string | null;
+  scan_cell: string | null;
+  additional_nrt: string | null;
+}
 export interface NrtFindings {
   pulse0: string | null;
   priority1: string | null;
   k27: string | null;
   stressors: string | null;
-  foundation: string | null;
-  body_scan: string | null;
+  foundation: FoundationFindings | null;
+  body_scan: BodyScanFindings | null;
 }
 // The Flow Sheet's lifestyle log (column B). Same null-means-not-mentioned rule.
 export interface Lifestyle {
@@ -96,6 +152,9 @@ export interface SupplementPlanRow {
   name: string;
   dose: string | null;
   qty: number | null;
+  schedule?: DosingSchedule | null;
+  /** "Here" or "Fullscript" — the grid's last column. */
+  source?: string | null;
 }
 export interface PriorNote {
   date: string;

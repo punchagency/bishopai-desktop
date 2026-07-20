@@ -1,4 +1,5 @@
 import type { ProtocolChange, ReviewContext, SessionNote } from '../lib/types';
+import { SCHEDULE_SLOTS } from '../lib/types';
 import { Badge } from '../components/Badge';
 
 const CHANGE_TONE: Record<ProtocolChange['type'], 'success' | 'warning' | 'accent' | 'neutral'> = {
@@ -30,23 +31,51 @@ export function SupplementProtocolPanel({
       <div className="il-suppgrid__section">
         <h4>What will be written to the Supplement Protocol</h4>
         {plan.merged.length ? (
-          <table className="il-table">
-            <thead>
-              <tr><th>Name</th><th>Special instructions</th><th>Qty</th></tr>
-            </thead>
-            <tbody>
-              {plan.merged.map((r) => (
-                <tr key={r.name}>
-                  <td>{r.name}</td>
-                  <td>{r.dose || <span className="il-empty">—</span>}</td>
-                  <td>{r.qty ?? <span className="il-empty">—</span>}</td>
+          /* Same column order as the sheet's Daily Schedule grid, so this reads
+             as a preview of the document rather than a different summary of it.
+             Scrolls horizontally rather than dropping columns — a missing
+             dosing time is exactly what Nicole is checking for. */
+          <div className="il-suppgrid__scroll">
+            <table className="il-table">
+              <thead>
+                <tr>
+                  <th>Supplements</th>
+                  <th>Special instructions</th>
+                  {SCHEDULE_SLOTS.map((s) => <th key={s.key}>{s.label}</th>)}
+                  <th>Bottle qty</th>
+                  <th>Here | Fullscript</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {plan.merged.map((r) => (
+                  <tr key={r.name}>
+                    <td>{r.name}</td>
+                    <td>{r.dose || <span className="il-empty">—</span>}</td>
+                    {SCHEDULE_SLOTS.map((s) => {
+                      const amount = r.schedule?.[s.key]?.trim();
+                      return (
+                        <td
+                          key={s.key}
+                          className={`il-table__slot ${amount ? '' : 'il-table__slot--off'}`}
+                        >
+                          {amount || '·'}
+                        </td>
+                      );
+                    })}
+                    <td>{r.qty ?? <span className="il-empty">—</span>}</td>
+                    <td>{r.source || <span className="il-empty">—</span>}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : (
           <p className="il-empty">No supplements on the plan.</p>
         )}
+        <p className="il-suppgrid__note">
+          A blank dosing column means no time of day was stated in the session —
+          not that the supplement is skipped then.
+        </p>
       </div>
 
       <div className="il-suppgrid__section">

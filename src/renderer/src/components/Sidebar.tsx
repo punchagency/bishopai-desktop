@@ -9,7 +9,7 @@ interface NavItem {
 
 const NAV: NavItem[] = [
   { key: 'overview', label: 'Overview', icon: '◈' },
-  { key: 'review', label: 'Review Queue', icon: '✎', status: 'live' },
+  { key: 'review', label: 'Sessions', icon: '✎', status: 'live' },
   { key: 'unmatched', label: 'Unmatched', icon: '⚟', status: 'live' },
   { key: 'checkout', label: 'Checkout', icon: '＄', status: 'live' },
   { key: 'refills', label: 'Refills', icon: '↻', status: 'live' },

@@ -1,4 +1,5 @@
 import type {
+  PriorNote,
   AuthStatus,
   CandidateAppointment,
   CheckoutData,
@@ -44,9 +45,17 @@ async function json<T>(url: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
-/** Fetch the review queue from the hosted backend. Throws on non-2xx. */
-export function fetchReviewQueue(backendUrl: string, signal?: AbortSignal): Promise<ReviewQueue> {
-  return json<ReviewQueue>(`${backendUrl}/review/queue`, { signal });
+/**
+ * Fetch the review queue. Defaults to what's awaiting Nicole; pass
+ * 'approved' for what she has already signed off on.
+ */
+export function fetchReviewQueue(
+  backendUrl: string,
+  signal?: AbortSignal,
+  scope: 'pending' | 'approved' = 'pending',
+): Promise<ReviewQueue> {
+  const q = scope === 'approved' ? '?status=approved' : '';
+  return json<ReviewQueue>(`${backendUrl}/review/queue${q}`, { signal });
 }
 
 /** Consolidated Overview data (stats + activity + upcoming). */
@@ -145,6 +154,51 @@ export function patchItem(
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),
   });
+}
+
+/**
+ * Correct a note that has already been approved. Not a save: the backend files
+ * the superseded version as a revision and republishes the documents that can
+ * safely be reissued. A plain PATCH is refused on an approved note.
+ */
+export function amendItem(
+  backendUrl: string,
+  kind: ReviewKind,
+  id: string,
+  body: { content_json: SessionNote; reason?: string },
+): Promise<ItemRow & { revision: number }> {
+  return json<ItemRow & { revision: number }>(`${backendUrl}/review/${kind}/${id}/amend`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
+/** The client's previous sessions, newest first — the running flow sheet view. */
+export function fetchSessionHistory(
+  backendUrl: string,
+  kind: ReviewKind,
+  id: string,
+): Promise<{ total: number; sessions: PriorNote[] }> {
+  return json<{ total: number; sessions: PriorNote[] }>(
+    `${backendUrl}/review/${kind}/${id}/history`,
+  );
+}
+
+export interface NoteRevision {
+  revision: number;
+  content_json: SessionNote;
+  reason: string | null;
+  created_at: string;
+}
+
+/** Superseded versions of a note, newest first. */
+export function fetchRevisions(
+  backendUrl: string,
+  kind: ReviewKind,
+  id: string,
+): Promise<{ revisions: NoteRevision[] }> {
+  return json<{ revisions: NoteRevision[] }>(`${backendUrl}/review/${kind}/${id}/revisions`);
 }
 
 /** Approve the document (writes to the backend approvals audit table). */

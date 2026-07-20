@@ -61,7 +61,7 @@ export function Overview({ backendUrl, courier, onNavigate }: Props) {
   if (n(d.stats.unmatched) > 0)
     notes.push({ id: 'unmatched', dot: 'warning', title: `${n(d.stats.unmatched)} Bee conversations need tagging`, meta: 'Unmatched' });
   if (n(d.stats.awaiting_review) > 0)
-    notes.push({ id: 'review', dot: 'accent', title: `${n(d.stats.awaiting_review)} items awaiting your review`, meta: 'Review Queue' });
+    notes.push({ id: 'review', dot: 'accent', title: `${n(d.stats.awaiting_review)} items awaiting your review`, meta: 'Sessions' });
   if (courier.state !== 'connected')
     notes.push({ id: 'bee', dot: 'warning', title: 'Bee is not connected', meta: 'Click Connect Bee' });
   notes.push({ id: 'pb', dot: 'neutral', title: 'PB REST API beta — approval pending', meta: 'blocks Checkout' });

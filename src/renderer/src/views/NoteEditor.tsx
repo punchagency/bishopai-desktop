@@ -1,5 +1,13 @@
-import type { Lifestyle, NrtFindings, ProtocolChange, SessionNote, Supplement } from '../lib/types';
+import type { Lifestyle, NrtFindings, PriorNote, ProtocolChange, SessionNote, Supplement } from '../lib/types';
+import { formatDate } from '../lib/format';
 import { Button } from '../components/Button';
+import {
+  BODY_SCAN_FIELDS,
+  EMPTY_BODY_SCAN,
+  EMPTY_FOUNDATION,
+  FOUNDATION_FIELDS,
+  LIFESTYLE_FIELDS,
+} from '../lib/flowSheetFields';
 
 const CHANGE_TYPES: ProtocolChange['type'][] = ['add', 'remove', 'adjust', 'continue'];
 const SUPP_CHANGES: Supplement['change'][] = ['start', 'stop', 'increase', 'decrease', 'continue'];
@@ -10,13 +18,25 @@ const SUPP_CHANGES: Supplement['change'][] = ['start', 'stop', 'increase', 'decr
 // empty, possibly-broken input.
 const NOT_STATED = 'Not stated in transcript — fill in if needed';
 const NOT_MENTIONED = 'Not mentioned';
+const NOT_TESTED = 'Not tested';
 
 /**
  * Structured editor for a SessionNote — the content_json behind a sheet/protocol.
  * String lists edit as one-item-per-line; the two object lists edit as rows.
  * Deliberately field-level (no raw JSON) so it's usable by a non-technical user.
  */
-export function NoteEditor({ note, onChange }: { note: SessionNote; onChange: (n: SessionNote) => void }) {
+export function NoteEditor({
+  note,
+  prior,
+  onChange,
+}: {
+  note: SessionNote;
+  /** The client's previous session, shown under each field. Editing a clinical
+   *  note without knowing what was recorded last time means re-reading the old
+   *  session elsewhere; the comparison belongs where the typing happens. */
+  prior?: PriorNote | null;
+  onChange: (n: SessionNote) => void;
+}) {
   const concerns = note?.concerns || [];
   const assessments = note?.assessments || [];
   const protocol_changes = note?.protocol_changes || [];
@@ -30,6 +50,9 @@ export function NoteEditor({ note, onChange }: { note: SessionNote; onChange: (n
     foundation: null,
     body_scan: null,
   };
+  // Editing a single prompt shouldn't require the whole pass to already exist.
+  const foundation = nrt.foundation ?? EMPTY_FOUNDATION;
+  const bodyScan = nrt.body_scan ?? EMPTY_BODY_SCAN;
   const lifestyle: Lifestyle = note?.lifestyle ?? {
     bm: null,
     sleep: null,
@@ -44,6 +67,9 @@ export function NoteEditor({ note, onChange }: { note: SessionNote; onChange: (n
   const followUpStrings = follow_ups.map((f) =>
     typeof f === 'string' ? f : f.text,
   );
+
+  const p = prior?.note;
+  const priorDate = prior ? formatDate(prior.date) : '';
 
   const set = (patch: Partial<SessionNote>) =>
     onChange({
@@ -66,6 +92,7 @@ export function NoteEditor({ note, onChange }: { note: SessionNote; onChange: (n
           onChange={(e) => set({ concerns: lines(e.target.value) })}
           placeholder="One concern per line"
         />
+        <Prior value={p?.concerns.join('\n')} date={priorDate} />
       </Field>
 
       <Field label="Assessments">
@@ -75,75 +102,81 @@ export function NoteEditor({ note, onChange }: { note: SessionNote; onChange: (n
           onChange={(e) => set({ assessments: lines(e.target.value) })}
           placeholder="One assessment per line"
         />
+        <Prior value={p?.assessments.join('\n')} date={priorDate} />
       </Field>
 
-      <Field label="NRT findings — Pulse 0 / Priority #1 / K-27 / Stressors">
-        <div className="il-row">
-          <input
-            className="il-input"
-            value={nrt.pulse0 ?? ''}
-            placeholder={NOT_STATED}
-            onChange={(e) => set({ nrt: { ...nrt, pulse0: e.target.value || null } })}
-          />
-          <input
-            className="il-input"
-            value={nrt.priority1 ?? ''}
-            placeholder={NOT_STATED}
-            onChange={(e) => set({ nrt: { ...nrt, priority1: e.target.value || null } })}
-          />
-        </div>
-        <div className="il-row">
-          <input
-            className="il-input"
-            value={nrt.k27 ?? ''}
-            placeholder={NOT_STATED}
-            onChange={(e) => set({ nrt: { ...nrt, k27: e.target.value || null } })}
-          />
-          <input
-            className="il-input"
-            value={nrt.stressors ?? ''}
-            placeholder={NOT_STATED}
-            onChange={(e) => set({ nrt: { ...nrt, stressors: e.target.value || null } })}
-          />
+      <Field label="NRT findings">
+        <div className="il-prompts">
+          {NRT_FIELDS.map((f) => (
+            <label key={f.key} className="il-prompt">
+              <span className="il-prompt__label">{f.label}</span>
+              <input
+                className="il-input"
+                value={nrt[f.key] ?? ''}
+                placeholder={NOT_STATED}
+                onChange={(e) => set({ nrt: { ...nrt, [f.key]: e.target.value || null } })}
+              />
+              <Prior value={p?.nrt?.[f.key]} date={priorDate} />
+            </label>
+          ))}
         </div>
       </Field>
 
+      {/* One input per muscle-testing prompt, in sheet order — so a value goes
+          where Nicole expects to read it back, and an untouched prompt stays
+          visibly empty rather than being buried in a paragraph. */}
       <Field label="Foundation (Flow Sheet FOUNDATION column)">
-        <textarea
-          className="il-input il-input--area"
-          value={nrt.foundation ?? ''}
-          placeholder={NOT_STATED}
-          onChange={(e) => set({ nrt: { ...nrt, foundation: e.target.value || null } })}
-        />
+        <div className="il-prompts">
+          {FOUNDATION_FIELDS.map((f) => (
+            <label key={f.key} className="il-prompt">
+              <span className="il-prompt__label">{f.label}</span>
+              <input
+                className="il-input"
+                value={foundation[f.key] ?? ''}
+                placeholder={NOT_TESTED}
+                onChange={(e) =>
+                  set({ nrt: { ...nrt, foundation: { ...foundation, [f.key]: e.target.value || null } } })
+                }
+              />
+              <Prior value={p?.nrt?.foundation?.[f.key]} date={priorDate} />
+            </label>
+          ))}
+        </div>
       </Field>
 
       <Field label="Body scan (Flow Sheet BODY SCAN column)">
-        <textarea
-          className="il-input il-input--area"
-          value={nrt.body_scan ?? ''}
-          placeholder={NOT_STATED}
-          onChange={(e) => set({ nrt: { ...nrt, body_scan: e.target.value || null } })}
-        />
+        <div className="il-prompts">
+          {BODY_SCAN_FIELDS.map((f) => (
+            <label key={f.key} className="il-prompt">
+              <span className="il-prompt__label">{f.label}</span>
+              <input
+                className="il-input"
+                value={bodyScan[f.key] ?? ''}
+                placeholder={NOT_TESTED}
+                onChange={(e) =>
+                  set({ nrt: { ...nrt, body_scan: { ...bodyScan, [f.key]: e.target.value || null } } })
+                }
+              />
+              <Prior value={p?.nrt?.body_scan?.[f.key]} date={priorDate} />
+            </label>
+          ))}
+        </div>
       </Field>
 
-      <Field label="Lifestyle log — BM / Sleep / Water / Cycle / Exercise / Diet">
-        <div className="il-row">
-          <input className="il-input" value={lifestyle.bm ?? ''} placeholder={`BM — ${NOT_MENTIONED}`}
-            onChange={(e) => set({ lifestyle: { ...lifestyle, bm: e.target.value || null } })} />
-          <input className="il-input" value={lifestyle.sleep ?? ''} placeholder={`Sleep — ${NOT_MENTIONED}`}
-            onChange={(e) => set({ lifestyle: { ...lifestyle, sleep: e.target.value || null } })} />
-        </div>
-        <div className="il-row">
-          <input className="il-input" value={lifestyle.water ?? ''} placeholder={`Water — ${NOT_MENTIONED}`}
-            onChange={(e) => set({ lifestyle: { ...lifestyle, water: e.target.value || null } })} />
-          <input className="il-input" value={lifestyle.cycle ?? ''} placeholder={`Cycle — ${NOT_MENTIONED}`}
-            onChange={(e) => set({ lifestyle: { ...lifestyle, cycle: e.target.value || null } })} />
-        </div>
-        <div className="il-row">
-          <input className="il-input" value={lifestyle.exercise ?? ''} placeholder={`Exercise — ${NOT_MENTIONED}`}
-            onChange={(e) => set({ lifestyle: { ...lifestyle, exercise: e.target.value || null } })} />
-          <input className="il-input" value={lifestyle.diet ?? ''} placeholder={`Diet — ${NOT_MENTIONED}`}
-            onChange={(e) => set({ lifestyle: { ...lifestyle, diet: e.target.value || null } })} />
+      <Field label="Lifestyle log">
+        <div className="il-prompts">
+          {LIFESTYLE_FIELDS.map((f) => (
+            <label key={f.key} className="il-prompt">
+              <span className="il-prompt__label">{f.label}</span>
+              <input
+                className="il-input"
+                value={lifestyle[f.key] ?? ''}
+                placeholder={NOT_MENTIONED}
+                onChange={(e) => set({ lifestyle: { ...lifestyle, [f.key]: e.target.value || null } })}
+              />
+              <Prior value={p?.lifestyle?.[f.key]} date={priorDate} />
+            </label>
+          ))}
         </div>
       </Field>
 
@@ -256,6 +289,29 @@ export function NoteEditor({ note, onChange }: { note: SessionNote; onChange: (n
         />
       </Field>
     </div>
+  );
+}
+
+const NRT_FIELDS: { key: 'pulse0' | 'priority1' | 'k27' | 'stressors'; label: string }[] = [
+  { key: 'pulse0', label: 'Pulse 0' },
+  { key: 'priority1', label: 'Priority #1' },
+  { key: 'k27', label: 'K-27' },
+  { key: 'stressors', label: 'Stressors' },
+];
+
+/**
+ * What the previous session recorded for this field. Rendered only when there is
+ * something to show — an empty line under every blank field would be noise, and
+ * the blank itself already reads as "not stated".
+ */
+function Prior({ value, date }: { value?: string | null; date?: string }) {
+  const v = value?.trim();
+  if (!v) return null;
+  return (
+    <span className="il-prior">
+      <span className="il-prior__tag">{date ? `Last time · ${date}` : 'Last time'}</span>
+      {v}
+    </span>
   );
 }
 

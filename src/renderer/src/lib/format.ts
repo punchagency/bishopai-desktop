@@ -26,3 +26,13 @@ export function humanize(value: string | null | undefined): string {
 export function humanizeLower(value: string | null | undefined): string {
   return humanize(value).toLowerCase();
 }
+
+/**
+ * A date as Nicole should read it. Anything unparseable renders as empty rather
+ * than "Invalid Date" — a blank beats a broken-looking cell on a clinical screen.
+ */
+export function formatDate(value: string | null | undefined): string {
+  if (!value) return '';
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString();
+}

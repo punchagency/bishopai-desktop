@@ -53,6 +53,14 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+/* For dense lists, where the default button would out-weigh the content. */
+.il-btn--sm {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.3rem 0.55rem;
+  border-radius: var(--radius-sm);
+  gap: 0.3rem;
+}
 
 /* Card */
 .il-card {
@@ -377,70 +385,131 @@
   margin-bottom: 0.45rem;
 }
 
-/* Flow Sheet review panel — a read-only, template-shaped preview of the
-   session's Appointment Flow Sheet block, side by side with the prior one. */
-.il-flowsheet {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-}
-@media (max-width: 720px) {
-  .il-flowsheet {
-    grid-template-columns: 1fr;
-  }
-}
-.il-flowsheet__block {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface-2);
-  padding: 0.85rem 1rem;
+/* Flow Sheet review panel — the session's Appointment Flow Sheet block laid out
+   under the same headings and prompt labels Nicole reads on the paper sheet.
+   Every field is one row: gutter mark, label, value, and last session's value.
+
+   The gutter is the point of the whole panel. A filled field gets a solid mark,
+   an unrecorded one an open ring, so running the eye down the left edge answers
+   "what didn't we cover this session?" without reading a single value. */
+.il-fs {
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
+  gap: 1.4rem;
 }
-.il-flowsheet__block--empty {
-  align-items: flex-start;
-}
-.il-flowsheet__blockTitle {
-  font-family: var(--font-heading);
-  font-size: 0.92rem;
+.il-fs__head {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: 0.5rem;
+  justify-content: space-between;
+  gap: 0.4rem 1rem;
+  padding-bottom: 0.7rem;
+  border-bottom: 1px solid var(--border);
 }
-.il-flowsheet__date {
-  font-family: var(--font-body);
+.il-fs__coverage {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+.il-fs__coverage strong {
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  color: var(--text);
+}
+.il-fs__compare {
+  margin: 0;
   font-size: 0.76rem;
   color: var(--text-muted);
-  font-weight: 400;
 }
-.il-flowsheet__row {
+.il-fs__section {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
 }
-.il-flowsheet__label {
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+.il-fs__sectionTitle {
+  margin: 0 0 0.35rem;
+  font-family: var(--font-heading);
+  font-size: 0.82rem;
+  font-weight: 400;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--text-muted);
 }
-.il-flowsheet__value {
-  font-size: 0.85rem;
+.il-fs__row {
+  display: grid;
+  grid-template-columns: 0.9rem minmax(9.5rem, 12rem) 1fr;
+  align-items: baseline;
+  gap: 0 0.7rem;
+  padding: 0.42rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.il-fs__row:last-child {
+  border-bottom: none;
+}
+/* The gutter mark: solid when recorded, an open ring when not. */
+.il-fs__mark {
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 50%;
+  background: var(--accent);
+  align-self: center;
+  justify-self: center;
+}
+.il-fs__row--blank .il-fs__mark {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--text-muted);
+  opacity: 0.55;
+}
+.il-fs__label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.il-fs__values {
+  min-width: 0;
+}
+.il-fs__value {
+  font-size: 0.88rem;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
   color: var(--text);
 }
-.il-flowsheet__value--blank {
+.il-fs__value--blank {
   color: var(--text-muted);
   font-style: italic;
+  opacity: 0.75;
 }
-.il-flowsheet__lifestyle {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.5rem 0.9rem;
-  border-top: 1px solid var(--border);
-  padding-top: 0.5rem;
+/* Last session's value sits directly under the current one, lighter, so a
+   change reads as vertical displacement — the way the paper sheet stacks
+   consecutive session blocks. */
+.il-fs__prior {
+  margin-top: 0.3rem;
+  padding-left: 0.55rem;
+  border-left: 2px solid var(--accent-soft);
+  font-size: 0.82rem;
+  color: var(--text);
+  opacity: 0.85;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.il-fs__priorTag {
+  display: inline-block;
+  margin-right: 0.4rem;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--accent-active);
+}
+@media (max-width: 640px) {
+  .il-fs__row {
+    grid-template-columns: 0.9rem 1fr;
+    row-gap: 0.15rem;
+  }
+  .il-fs__values {
+    grid-column: 2;
+  }
 }
 
 /* Supplement Protocol review panel */
@@ -1193,3 +1262,419 @@
   font-size: 0.72rem;
 }
 
+
+/* ── Review split pane ──────────────────────────────────────────────────────
+   The queue stays on screen beside the open session. Reviewing is a working
+   pass down a list, not a series of interruptions, so the list must never be
+   hidden behind what it opened. */
+.il-split {
+  display: grid;
+  grid-template-columns: minmax(16rem, 24rem) 1fr;
+  gap: 1.1rem;
+  align-items: start;
+}
+.il-split__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  position: sticky;
+  top: 0;
+  max-height: calc(100vh - 11rem);
+  overflow-y: auto;
+}
+.il-split__detail {
+  min-width: 0; /* let long clinical values wrap instead of stretching the grid */
+}
+.il-split__placeholder {
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+/* A queue row is a line to scan, not a card to read. Name first; everything
+   else is quieter and smaller, and the row stays around 2.5rem tall so a full
+   day's queue fits on screen at once. */
+.il-qrow {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding-right: 0.3rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+}
+.il-qrow:hover {
+  background: var(--surface-2);
+}
+.il-qrow--on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.il-qrow__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.5rem;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  border-radius: var(--radius-md);
+}
+.il-qrow__main:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+/* Status as a dot, not a pill — it's a secondary attribute and a badge next to
+   every name turns the list into stripes of uppercase text. */
+.il-qrow__status {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--text-muted);
+  opacity: 0.45;
+}
+.il-qrow__status--draft {
+  background: var(--accent);
+  opacity: 1;
+}
+.il-qrow__status--in_review {
+  background: var(--warning);
+  opacity: 1;
+}
+.il-qrow__text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+}
+.il-qrow__name {
+  font-family: var(--font-heading);
+  font-size: 0.86rem;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.il-qrow__meta {
+  font-size: 0.7rem;
+  line-height: 1.25;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Approve stays out of the way until the row is hovered or open — the detail
+   pane is where approving normally happens. Always present for keyboard and
+   assistive tech; only its opacity changes. */
+.il-qrow__approve {
+  flex: none;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.il-qrow:hover .il-qrow__approve,
+.il-qrow--on .il-qrow__approve,
+.il-qrow__approve:focus-visible {
+  opacity: 1;
+}
+@media (hover: none) {
+  .il-qrow__approve {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .il-qrow__approve {
+    transition: none;
+  }
+}
+
+/* ── Review detail (formerly a modal) ─────────────────────────────────────── */
+.il-detail {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+}
+.il-detail__head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1rem 1.1rem;
+  border-bottom: 1px solid var(--border);
+}
+/* The tab bar needs air under the title, or the two read as one crowded block. */
+.il-detail .il-tabs {
+  padding: 0.9rem 1.1rem 0;
+  margin-bottom: 0;
+}
+.il-detail__title {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  min-width: 0;
+}
+.il-detail__title h2 {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1.02rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.il-detail__kind {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.il-detail__body {
+  padding: 1rem 1.1rem 1.4rem;
+}
+.il-detail__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.7rem 1.1rem;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+.il-detail__actions .il-error {
+  margin-right: auto;
+}
+/* The back button only earns its place once the panes stack. */
+.il-detail__head .il-btn--ghost {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .il-split {
+    grid-template-columns: 1fr;
+  }
+  .il-split__list {
+    position: static;
+    max-height: none;
+  }
+  /* With one column, showing both at once would bury the detail under the
+     whole queue — so an open session takes over. */
+  .il-split--open .il-split__list,
+  .il-split__placeholder {
+    display: none;
+  }
+  .il-detail__head .il-btn--ghost {
+    display: inline-flex;
+  }
+}
+
+/* Per-prompt inputs in the note editor — one field per muscle-testing prompt,
+   so a value goes where Nicole expects to read it back on the sheet. */
+.il-prompts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0.5rem 0.9rem;
+}
+.il-prompt {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+.il-prompt__label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* Supplement Protocol grid — matches the sheet's Daily Schedule columns, so
+   the review screen and the published xlsx read the same way. */
+.il-suppgrid__scroll {
+  overflow-x: auto;
+}
+.il-suppgrid__scroll .il-table {
+  min-width: 46rem;
+}
+.il-table__slot {
+  text-align: center;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+.il-table__slot--off {
+  color: var(--text-muted);
+  opacity: 0.4;
+}
+.il-suppgrid__note {
+  margin: 0.5rem 0 0;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+/* Awaiting review / Approved switch above the queue list. */
+.il-tabs--scope {
+  margin-bottom: 0.9rem;
+}
+/* Why an approved note is being corrected, captured at the moment of the
+   amendment rather than reconstructed later. */
+.il-detail__reason {
+  margin-right: auto;
+  max-width: 26rem;
+}
+
+/* What the previous session recorded, under the field being edited — so a
+   correction is made against the client's history, not from memory. */
+.il-prior {
+  display: block;
+  margin-top: 0.28rem;
+  padding-left: 0.5rem;
+  border-left: 2px solid var(--accent-soft);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--text);
+  opacity: 0.85;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.il-prior__tag {
+  display: inline-block;
+  margin-right: 0.4rem;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent-active);
+}
+
+/* Amendment history: what was corrected on an approved note, and why. Kept to a
+   quiet strip — it matters when it exists and shouldn't shout when it doesn't. */
+.il-amends {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.3rem 0.9rem;
+  margin: 0 1.1rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+.il-amends__title {
+  font-weight: 600;
+  color: var(--text);
+}
+.il-amends__item strong {
+  font-weight: 600;
+}
+
+/* Count of prior sessions on the History tab. */
+.il-tab__count {
+  margin-left: 0.35rem;
+  padding: 0.05rem 0.32rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-active);
+  font-size: 0.68rem;
+}
+
+/* Session history: one column per visit, the way her paper flow sheet stacks
+   every appointment in one place so a field can be read across time. */
+.il-hist__intro {
+  margin: 0 0 0.7rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+/* Beyond three or four visits the table is wider than the pane and has to scroll.
+   The row labels must not scroll away with it — a grid of clinical values with no
+   visible field names is worse than no grid at all — so the label column and the
+   date header are both pinned. Capped height keeps the dates in view while
+   reading down a long form. */
+.il-hist__scroll {
+  overflow: auto;
+  max-height: 70vh;
+}
+.il-hist__table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  font-size: 0.82rem;
+}
+.il-hist__corner {
+  position: sticky;
+  left: 0;
+  top: 0;
+  z-index: 3;
+  min-width: 9rem;
+  background: var(--surface);
+}
+.il-hist__col {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  min-width: 11rem;
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.il-hist__col--now {
+  color: var(--accent-active);
+}
+.il-hist__section {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface);
+  padding: 0.85rem 0 0.3rem;
+  text-align: left;
+  font-family: var(--font-heading);
+  font-size: 0.76rem;
+  font-weight: 400;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.il-hist__rowLabel {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface);
+  padding: 0.35rem 0.6rem 0.35rem 0;
+  text-align: left;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  vertical-align: top;
+  border-bottom: 1px solid var(--border);
+}
+.il-hist__cell {
+  padding: 0.35rem 0.6rem;
+  vertical-align: top;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid var(--border);
+}
+/* The session under review is the reference column everything is read against. */
+.il-hist__cell--now {
+  background: var(--accent-soft);
+}
+.il-hist__cell--blank {
+  color: var(--text-muted);
+  opacity: 0.45;
+}

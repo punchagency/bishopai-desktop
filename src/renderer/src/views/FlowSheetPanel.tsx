@@ -1,14 +1,27 @@
 import type { PriorNote, SessionNote } from '../lib/types';
 
 // A read-only, template-shaped view of what this session's Appointment Flow
-// Sheet block will actually contain — same section order/labels Nicole
-// already reads on the real sheet (DATE / SYMPTOMS / FOUNDATION / BODY SCAN /
-// PROTOCOL / lifestyle log) — plus the previous session's block alongside it
-// for comparison. Editing happens in the Edit tab; this is the WYSIWYG check
-// before approving.
+// Sheet block will contain — the same headings, prompt labels and order Nicole
+// reads on the paper sheet (DATE / NOTES / SYMPTOMS / FOUNDATION / BODY SCAN /
+// PROTOCOL), with the previous session's value under each field for comparison.
+// Editing happens in the Edit tab; this is the WYSIWYG check before approving.
+//
+// Two rules carry the clinical weight here:
+//  1. A blank is data. Null means the transcript never stated it — correct and
+//     expected, never a bug to paper over with a plausible value.
+//  2. Blanks must be scannable. Every row carries a gutter mark, so a column of
+//     open rings down the left is the answer to "what didn't we cover?" without
+//     reading a word.
 
 const NOT_STATED = 'Not stated in transcript';
 const NOT_MENTIONED = 'Not mentioned';
+
+import {
+  BODY_SCAN_FIELDS,
+  FOUNDATION_FIELDS,
+  LIFESTYLE_FIELDS,
+} from '../lib/flowSheetFields';
+import { formatDate } from '../lib/format';
 
 function describeSupplements(note: SessionNote): string | null {
   if (!note.supplements.length) return null;
@@ -20,53 +33,140 @@ function describeSupplements(note: SessionNote): string | null {
     .join('\n');
 }
 
-function Row({ label, value, placeholder = NOT_STATED }: { label: string; value?: string | null; placeholder?: string }) {
+const clean = (v?: string | null): string | null => (v && v.trim() ? v.trim() : null);
+
+/**
+ * One field: gutter mark, label, this session's value, and — when it differs —
+ * what the previous session recorded. The prior line sits directly under the
+ * current one so a change reads as vertical displacement, the same way the paper
+ * sheet stacks each session's block above the next.
+ */
+function Row({
+  label,
+  value,
+  prior,
+  placeholder = NOT_STATED,
+}: {
+  label: string;
+  value?: string | null;
+  prior?: string | null;
+  placeholder?: string;
+}) {
+  const v = clean(value);
+  const p = clean(prior);
   return (
-    <div className="il-flowsheet__row">
-      <div className="il-flowsheet__label">{label}</div>
-      <div className={value ? 'il-flowsheet__value' : 'il-flowsheet__value il-flowsheet__value--blank'}>
-        {value || placeholder}
+    <div className={`il-fs__row ${v ? '' : 'il-fs__row--blank'}`}>
+      <span className="il-fs__mark" aria-hidden="true" />
+      <div className="il-fs__label">{label}</div>
+      <div className="il-fs__values">
+        <div className={v ? 'il-fs__value' : 'il-fs__value il-fs__value--blank'}>
+          {v ?? placeholder}
+        </div>
+        {p && p !== v && (
+          <div className="il-fs__prior">
+            <span className="il-fs__priorTag">Last time</span>
+            {p}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-function Block({ title, date, note }: { title: string; date?: string; note: SessionNote }) {
-  const ls = note.lifestyle;
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="il-flowsheet__block">
-      <div className="il-flowsheet__blockTitle">
-        {title}
-        {date && <span className="il-flowsheet__date">{new Date(date).toLocaleDateString()}</span>}
-      </div>
-      <Row label="SYMPTOMS" value={note.concerns.join('; ')} />
-      <Row label="FOUNDATION" value={note.nrt?.foundation ?? (note.assessments.length ? note.assessments.join('\n') : null)} />
-      <Row label="BODY SCAN" value={note.nrt?.body_scan} />
-      <Row label="PROTOCOL" value={describeSupplements(note)} placeholder="No supplement changes" />
-      <div className="il-flowsheet__lifestyle">
-        <Row label="BM" value={ls?.bm} placeholder={NOT_MENTIONED} />
-        <Row label="SLEEP" value={ls?.sleep} placeholder={NOT_MENTIONED} />
-        <Row label="WATER" value={ls?.water} placeholder={NOT_MENTIONED} />
-        <Row label="CYCLE" value={ls?.cycle} placeholder={NOT_MENTIONED} />
-        <Row label="EXERCISE" value={ls?.exercise} placeholder={NOT_MENTIONED} />
-        <Row label="DIET" value={ls?.diet} placeholder={NOT_MENTIONED} />
-      </div>
-    </div>
+    <section className="il-fs__section">
+      <h3 className="il-fs__sectionTitle">{title}</h3>
+      {children}
+    </section>
   );
+}
+
+/** Count of fields with a recorded value, for the coverage line. */
+function coverage(note: SessionNote): { filled: number; total: number } {
+  const values: (string | null | undefined)[] = [
+    note.concerns.join('; '),
+    describeSupplements(note),
+    ...LIFESTYLE_FIELDS.map((f) => note.lifestyle?.[f.key]),
+    ...FOUNDATION_FIELDS.map((f) => note.nrt?.foundation?.[f.key]),
+    ...BODY_SCAN_FIELDS.map((f) => note.nrt?.body_scan?.[f.key]),
+  ];
+  return { filled: values.filter(clean).length, total: values.length };
 }
 
 export function FlowSheetPanel({ note, prior }: { note: SessionNote; prior: PriorNote | null }) {
+  const p = prior?.note;
+  const { filled, total } = coverage(note);
+
   return (
-    <div className="il-flowsheet">
-      <Block title="This session (new block)" note={note} />
-      {prior ? (
-        <Block title="Previous session" date={prior.date} note={prior.note} />
-      ) : (
-        <div className="il-flowsheet__block il-flowsheet__block--empty">
-          <div className="il-flowsheet__blockTitle">Previous session</div>
-          <p className="il-empty">No prior approved session for this client yet — this will be the first block.</p>
-        </div>
-      )}
+    <div className="il-fs">
+      <div className="il-fs__head">
+        <p className="il-fs__coverage">
+          <strong>{filled}</strong> of {total} fields captured from this session
+        </p>
+        {prior ? (
+          <p className="il-fs__compare">
+            Compared against {formatDate(prior.date)}
+          </p>
+        ) : (
+          <p className="il-fs__compare">
+            First session on file — nothing to compare against yet.
+          </p>
+        )}
+      </div>
+
+      <Section title="Notes">
+        {LIFESTYLE_FIELDS.map((f) => (
+          <Row
+            key={f.key}
+            label={f.label}
+            value={note.lifestyle?.[f.key]}
+            prior={p?.lifestyle?.[f.key]}
+            placeholder={NOT_MENTIONED}
+          />
+        ))}
+      </Section>
+
+      <Section title="Symptoms">
+        <Row
+          label="Reported"
+          value={note.concerns.join('; ')}
+          prior={p?.concerns.join('; ')}
+        />
+      </Section>
+
+      <Section title="Foundation">
+        {FOUNDATION_FIELDS.map((f) => (
+          <Row
+            key={f.key}
+            label={f.label}
+            value={note.nrt?.foundation?.[f.key]}
+            prior={p?.nrt?.foundation?.[f.key]}
+            placeholder="Not tested this session"
+          />
+        ))}
+      </Section>
+
+      <Section title="Body scan">
+        {BODY_SCAN_FIELDS.map((f) => (
+          <Row
+            key={f.key}
+            label={f.label}
+            value={note.nrt?.body_scan?.[f.key]}
+            prior={p?.nrt?.body_scan?.[f.key]}
+            placeholder="Not tested this session"
+          />
+        ))}
+      </Section>
+
+      <Section title="Protocol">
+        <Row
+          label="Changes"
+          value={describeSupplements(note)}
+          prior={p ? describeSupplements(p) : null}
+          placeholder="No supplement changes"
+        />
+      </Section>
     </div>
   );
 }
