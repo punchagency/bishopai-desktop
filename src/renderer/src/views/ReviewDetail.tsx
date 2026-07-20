@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Markdown } from '../components/Markdown';
 import { Button } from '../components/Button';
 import { Badge } from '../components/Badge';
+import { InfoPopover } from '../components/InfoPopover';
 import {
   amendItem,
   approveItem,
@@ -11,6 +12,7 @@ import {
   fetchRevisions,
   fetchSessionHistory,
   patchItem,
+  unmatchReviewItem,
   type NoteRevision,
 } from '../lib/api';
 import { formatDate } from '../lib/format';
@@ -51,6 +53,11 @@ export function ReviewDetail({ backendUrl, kind, id, clientName, onClose, onChan
   const [revisions, setRevisions] = useState<NoteRevision[]>([]);
   const [history, setHistory] = useState<PriorNote[]>([]);
   const [historyTotal, setHistoryTotal] = useState(0);
+  const [confirmUnmatch, setConfirmUnmatch] = useState(false);
+  // Approving either the sheet or the protocol publishes documents and pins the
+  // client pairing, so a draft can be undetachable because its sibling is done.
+  const [canUnmatch, setCanUnmatch] = useState(false);
+  const [unmatchBlocked, setUnmatchBlocked] = useState<string | null>(null);
   const [historyLoading, setHistoryLoading] = useState(true);
   const isSample = id.startsWith('sample-');
   const isApproved = status === 'approved';
@@ -76,6 +83,8 @@ export function ReviewDetail({ backendUrl, kind, id, clientName, onClose, onChan
       .then((row) => {
         setNote(row.content_json);
         setStatus(row.status);
+        setCanUnmatch(row.can_unmatch ?? false);
+        setUnmatchBlocked(row.unmatch_blocked_reason ?? null);
       })
       .catch((e) => {
         setError(String(e));
@@ -121,8 +130,11 @@ export function ReviewDetail({ backendUrl, kind, id, clientName, onClose, onChan
         await patchItem(backendUrl, kind, id, { content_json: note });
       }
       loadPreview();
-      setTab('preview');
+      // Saving from the grid should keep her on the grid to see the result.
+      if (tab !== 'supplement') setTab('preview');
       onChanged();
+      // The plan preview is derived server-side, so refresh it after a save.
+      fetchReviewContext(backendUrl, kind, id).then(setContext).catch(() => {});
     } catch (e) {
       setError(String(e));
     } finally {
@@ -138,11 +150,30 @@ export function ReviewDetail({ backendUrl, kind, id, clientName, onClose, onChan
   const cancelEdit = () => {
     setAmending(false);
     setReason('');
-    setTab('preview');
+    // Cancelling the grid should leave the grid, not jump to Preview.
+    if (tab !== 'supplement') setTab('preview');
     // Drop in-memory edits so a cancelled amendment can't be saved later.
     fetchItem(backendUrl, kind, id)
       .then((row) => setNote(row.content_json))
       .catch(() => {});
+  };
+
+  // Wrong client. Detaching returns the recording to Unmatched, where it can be
+  // assigned to the right one; the draft note attributed to the wrong person is
+  // removed with it. Refused server-side once the note is approved.
+  const unmatch = async () => {
+    if (isSample) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await unmatchReviewItem(backendUrl, kind, id);
+      onChanged();
+      onClose();
+    } catch (e) {
+      setError(String(e));
+      setBusy(false);
+      setConfirmUnmatch(false);
+    }
   };
 
   const approve = async () => {
@@ -159,7 +190,10 @@ export function ReviewDetail({ backendUrl, kind, id, clientName, onClose, onChan
     }
   };
 
-  const label = kind === 'sheets' ? 'Appointment Sheet' : 'Protocol';
+  // One session, rendered two ways — the internal Appointment Sheet keeps the
+  // practitioner's assessments, the client Protocol drops them. Both come from
+  // the same note, so the header names the session, not a document.
+  const label = 'Session';
 
   return (
     <div className="il-detail">
@@ -172,6 +206,24 @@ export function ReviewDetail({ backendUrl, kind, id, clientName, onClose, onChan
         <div className="il-detail__title">
           <h2>{clientName}</h2>
           <span className="il-detail__kind">{label}</span>
+          <InfoPopover label="About this session" title="One session, four views">
+            All four tabs show the <strong>same note</strong> from this visit, arranged the way
+            each document needs it.
+            <br />
+            <br />
+            <strong>Preview</strong> — the written record.
+            <br />
+            <strong>Edit</strong> — every field, with what you recorded last time underneath.
+            <br />
+            <strong>Flow Sheet</strong> — this visit's block, and what's missing from it.
+            <br />
+            <strong>History</strong> — every earlier visit side by side.
+            <br />
+            <strong>Supplement Protocol</strong> — the sheet the client takes home.
+            <br />
+            <br />
+            Approving writes the internal record and the client's documents together.
+          </InfoPopover>
           {isApproved && <Badge tone="success">Approved</Badge>}
         </div>
       </header>
@@ -252,6 +304,7 @@ export function ReviewDetail({ backendUrl, kind, id, clientName, onClose, onChan
               plan={context?.supplementPlan ?? null}
               note={note}
               priorProtocol={context?.prior.protocol?.note ?? null}
+              onChange={isApproved || isSample ? undefined : setNote}
             />
           )
           : <Pending failed={loadFailed} />)}
@@ -260,7 +313,7 @@ export function ReviewDetail({ backendUrl, kind, id, clientName, onClose, onChan
       {/* Sticky, so Approve stays reachable however long the clinical form runs. */}
       <footer className="il-detail__actions">
         {error && <span className="il-error">{error}</span>}
-        {tab === 'edit' ? (
+        {tab === 'edit' || (tab === 'supplement' && !isApproved && !isSample) ? (
           <>
             {amending && (
               <input
@@ -281,8 +334,32 @@ export function ReviewDetail({ backendUrl, kind, id, clientName, onClose, onChan
           <Button variant="secondary" onClick={startAmend} disabled={isSample}>
             Amend…
           </Button>
+        ) : confirmUnmatch ? (
+          <>
+            <span className="il-detail__warn">
+              Detach this recording from {clientName}? The draft note is discarded and the
+              recording returns to Unmatched.
+            </span>
+            <Button variant="ghost" onClick={() => setConfirmUnmatch(false)} disabled={busy}>
+              Keep it
+            </Button>
+            <Button variant="primary" onClick={unmatch} disabled={busy}>
+              {busy ? 'Detaching…' : 'Detach'}
+            </Button>
+          </>
         ) : (
           <>
+            {canUnmatch ? (
+              <Button variant="ghost" onClick={() => setConfirmUnmatch(true)} disabled={isSample}>
+                Wrong client?
+              </Button>
+            ) : (
+              unmatchBlocked && (
+                <span className="il-detail__note" title={unmatchBlocked}>
+                  Client can't be changed
+                </span>
+              )
+            )}
             <Button variant="secondary" onClick={() => setTab('edit')} disabled={isSample}>
               Edit
             </Button>

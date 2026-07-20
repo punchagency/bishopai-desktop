@@ -35,9 +35,25 @@ export interface ReviewProtocol {
   content_json: Record<string, unknown>;
 }
 
+/**
+ * One row per SESSION. The appointment sheet and the client protocol hold the
+ * same note and are approved together, so the queue lists the visit once rather
+ * than listing the same session twice under two document names.
+ */
+export interface ReviewSession {
+  appointment_id: string;
+  client_id: string | null;
+  client_name: string | null;
+  starts_at: string | null;
+  updated_at: string;
+  status: 'draft' | 'in_review' | 'approved';
+  sheet_id: string | null;
+  protocol_id: string | null;
+  content_json: Record<string, unknown>;
+}
+
 export interface ReviewQueue {
-  appointment_sheets: ReviewSheet[];
-  protocols: ReviewProtocol[];
+  sessions: ReviewSession[];
 }
 
 // content_json shape (server/src/session/extract.ts SessionNoteSchema).
@@ -75,6 +91,9 @@ export interface Supplement {
   quantity: number | null;
   change: SupplementChange;
   schedule?: DosingSchedule | null;
+  /** "Here" or "Fullscript" — where the client obtains it. Distinct from the
+   *  plan row's `source`, which is provenance and never shown to a client. */
+  obtained_from?: string | null;
 }
 export interface FollowUp {
   text: string;
@@ -153,8 +172,10 @@ export interface SupplementPlanRow {
   dose: string | null;
   qty: number | null;
   schedule?: DosingSchedule | null;
-  /** "Here" or "Fullscript" — the grid's last column. */
+  /** Provenance (notes | fullscript | pb) — internal, never shown to a client. */
   source?: string | null;
+  /** "Here" or "Fullscript" — the grid's last column. */
+  obtained_from?: string | null;
 }
 export interface PriorNote {
   date: string;
@@ -187,7 +208,24 @@ export interface CandidateAppointment {
   id: string;
   starts_at: string;
   ends_at: string;
+  client_id: string | null;
   client_name: string | null;
+  /** How often this client's name is spoken in the recording. Ranking evidence
+   *  only — a name in a transcript never assigns anything on its own. */
+  name_mentions: number;
+  name_matched_on: 'full' | 'first' | 'last' | null;
+  /** Seconds the recording and this booking overlap. */
+  overlap_seconds: number;
+}
+
+/** A client, for the picker used when a recording has no booking at all. */
+export interface ClientSummary {
+  id: string;
+  name: string;
+  email: string | null;
+  pb_id: string | null;
+  last_seen: string | null;
+  visit_count: string | number;
 }
 
 // WF4 refill digest (server/src/routes/refills.ts).

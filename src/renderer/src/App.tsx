@@ -28,6 +28,12 @@ export function App() {
   const [backendUrl, setBackendUrl] = useState(DEFAULT_BACKEND);
   const [courier, setCourier] = useState<CourierStatus>(DISCONNECTED);
   const [view, setView] = useState<ViewKey>('overview');
+  const [navCollapsed, setNavCollapsed] = useState(
+    () => localStorage.getItem('innerlume.nav') === 'collapsed',
+  );
+  useEffect(() => {
+    localStorage.setItem('innerlume.nav', navCollapsed ? 'collapsed' : 'open');
+  }, [navCollapsed]);
   const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('innerlume.onboarded'));
 
   const dismissOnboarding = () => {
@@ -137,7 +143,13 @@ export function App() {
       )}
 
       <div className="il-body">
-        <Sidebar active={view} counts={counts} onSelect={setView} />
+        <Sidebar
+          active={view}
+          counts={counts}
+          onSelect={setView}
+          collapsed={navCollapsed}
+          onToggle={() => setNavCollapsed((c) => !c)}
+        />
         <main className="il-main">
           {view === 'overview' && <Overview backendUrl={backendUrl} courier={courier} onNavigate={setView} />}
           {view === 'review' && <ReviewQueue backendUrl={backendUrl} onChanged={refreshCounts} />}

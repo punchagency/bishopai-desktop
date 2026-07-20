@@ -14,34 +14,28 @@ import { ReviewDetail } from './ReviewDetail';
 // (design preview / offline). Replaced by live data the moment /review/queue
 // responds.
 const SAMPLE: Queue = {
-  appointment_sheets: [
+  sessions: [
     {
-      id: 'sample-1',
-      status: 'draft',
-      updated_at: new Date().toISOString(),
-      appointment_id: 'appt-1',
+      appointment_id: 'sample-appt-1',
+      client_id: 'c1',
+      client_name: 'Jane Doe',
       starts_at: new Date().toISOString(),
-      client_id: 'c1',
-      client_name: 'Jane Doe',
-      content_json: {},
-    },
-  ],
-  protocols: [
-    {
-      id: 'sample-2',
-      status: 'draft',
       updated_at: new Date().toISOString(),
-      appointment_id: 'appt-1',
-      client_id: 'c1',
-      client_name: 'Jane Doe',
+      status: 'draft',
+      sheet_id: 'sample-1',
+      protocol_id: 'sample-2',
       content_json: {},
     },
   ],
 };
 
 interface Selection {
+  /** Which document backs the detail view — the session's note is the same in
+   *  both, so the sheet is preferred and the protocol is the fallback for a
+   *  session that has no client attached yet. */
   kind: ReviewKind;
   id: string;
+  appointmentId: string;
   clientName: string;
   clientId: string | null;
 }
@@ -66,11 +60,9 @@ export function ReviewQueue({ backendUrl, onChanged }: { backendUrl: string; onC
           // Drop a selection whose row is gone — approved out of this list,
           // deleted, or reseeded underneath us. Without this the detail pane
           // sits on a dead id showing "Loading…" against a 404 forever.
-          setSelected((cur) => {
-            if (!cur) return cur;
-            const rows = cur.kind === 'sheets' ? q.appointment_sheets : q.protocols;
-            return rows.some((r) => r.id === cur.id) ? cur : null;
-          });
+          setSelected((cur) =>
+            cur && q.sessions.some((sn) => sn.appointment_id === cur.appointmentId) ? cur : null,
+          );
         })
         .catch(() => {
           setQueue(SAMPLE);
@@ -101,9 +93,11 @@ export function ReviewQueue({ backendUrl, onChanged }: { backendUrl: string; onC
     setScope(next);
   };
 
-  const approve = async (kind: ReviewKind, id: string) => {
+  // Approving either document approves the whole session, so the row is keyed on
+  // the appointment rather than on whichever document backs it.
+  const approve = async (kind: ReviewKind, id: string, appointmentId: string) => {
     if (id.startsWith('sample-')) return;
-    setPending(id);
+    setPending(appointmentId);
     try {
       await approveItem(backendUrl, kind, id);
       await load();
@@ -118,7 +112,7 @@ export function ReviewQueue({ backendUrl, onChanged }: { backendUrl: string; onC
   if (loading && !queue) return <SkeletonView cards={6} />;
 
   const q = queue ?? SAMPLE;
-  const total = q.appointment_sheets.length + q.protocols.length;
+  const total = q.sessions.length;
 
   return (
     <section className="il-view">
@@ -176,34 +170,33 @@ export function ReviewQueue({ backendUrl, onChanged }: { backendUrl: string; onC
            context. Collapses to one column on narrow windows. */
         <div className={`il-split ${selected ? 'il-split--open' : ''}`}>
           <div className="il-split__list">
-            {q.appointment_sheets.map((s) => (
-              <QueueRow
-                key={s.id}
-                name={s.client_name ?? 'Unknown client'}
-                kind="Appointment sheet"
-                date={formatDate(s.starts_at ?? s.updated_at)}
-                status={s.status}
-                active={selected?.kind === 'sheets' && selected.id === s.id}
-                approving={pending === s.id}
-                canApprove={scope === 'pending'}
-                onOpen={() => setSelected({ kind: 'sheets', id: s.id, clientName: s.client_name ?? 'Unknown client', clientId: s.client_id })}
-                onApprove={() => approve('sheets', s.id)}
-              />
-            ))}
-            {q.protocols.map((p) => (
-              <QueueRow
-                key={p.id}
-                name={p.client_name ?? 'Unknown client'}
-                kind="Protocol"
-                date={formatDate(p.starts_at ?? p.updated_at)}
-                status={p.status}
-                active={selected?.kind === 'protocols' && selected.id === p.id}
-                approving={pending === p.id}
-                canApprove={scope === 'pending'}
-                onOpen={() => setSelected({ kind: 'protocols', id: p.id, clientName: p.client_name ?? 'Unknown client', clientId: p.client_id })}
-                onApprove={() => approve('protocols', p.id)}
-              />
-            ))}
+            {q.sessions.map((sn) => {
+              const kind: ReviewKind = sn.sheet_id ? 'sheets' : 'protocols';
+              const id = sn.sheet_id ?? sn.protocol_id;
+              if (!id) return null;
+              return (
+                <QueueRow
+                  key={sn.appointment_id}
+                  name={sn.client_name ?? 'Unknown client'}
+                  kind="Session"
+                  date={formatDate(sn.starts_at ?? sn.updated_at)}
+                  status={sn.status}
+                  active={selected?.appointmentId === sn.appointment_id}
+                  approving={pending === sn.appointment_id}
+                  canApprove={scope === 'pending'}
+                  onOpen={() =>
+                    setSelected({
+                      kind,
+                      id,
+                      appointmentId: sn.appointment_id,
+                      clientName: sn.client_name ?? 'Unknown client',
+                      clientId: sn.client_id,
+                    })
+                  }
+                  onApprove={() => approve(kind, id, sn.appointment_id)}
+                />
+              );
+            })}
           </div>
 
           <div className="il-split__detail">

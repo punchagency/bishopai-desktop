@@ -6,6 +6,7 @@ import {
   LIFESTYLE_FIELDS,
 } from '../lib/flowSheetFields';
 import { formatDate } from '../lib/format';
+import { InfoPopover } from '../components/InfoPopover';
 
 // Every visit side by side, one column per session — the same shape as Nicole's
 // paper flow sheet, which stacks each appointment's block down a single page so
@@ -105,7 +106,19 @@ export function SessionHistoryPanel({
         {total > sessions.length
           ? `Showing the ${sessions.length} most recent of ${total} earlier sessions.`
           : `${sessions.length} earlier session${sessions.length === 1 ? '' : 's'}, newest first.`}{' '}
-        A blank means that field was never recorded for that visit.
+        A blank means that field was never recorded for that visit.{' '}
+        <InfoPopover label="How to read this" title="Every visit side by side">
+          One column per appointment, newest on the left, the same way your paper flow sheet
+          stacks each visit down the page.
+          <br />
+          <br />
+          Read <strong>across a row</strong> to see one field change over time — sleep going
+          5 hours, 6, 7, then back to 6 is the kind of thing a single "last visit" comparison
+          hides.
+          <br />
+          <br />
+          The highlighted first column is the session you're reviewing now.
+        </InfoPopover>
       </p>
 
       {/* Scrolls sideways rather than dropping columns — a visit missing from

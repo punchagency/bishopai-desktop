@@ -298,7 +298,10 @@
   border-color: var(--accent);
 }
 .il-input--area {
-  min-height: 74px;
+  /* Clinical notes run to several lines — concerns, assessments and follow-ups
+     are lists, not sentences. A 74px box showed two of them and made every field
+     look emptier than it was. Still resizable for the long ones. */
+  min-height: 150px;
   resize: vertical;
 }
 .il-input--select {
@@ -576,6 +579,7 @@
 .il-choice {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.6rem;
   padding: 0.55rem 0.7rem;
   border: 1px solid var(--border);
@@ -1498,11 +1502,24 @@
 
 /* Supplement Protocol grid — matches the sheet's Daily Schedule columns, so
    the review screen and the published xlsx read the same way. */
+/* The Daily Schedule grid is wider than the pane, so it scrolls sideways — but
+   only sideways. Setting overflow-x alone makes the browser compute overflow-y
+   to auto as well, which turns the table into a short inner scroll region
+   instead of letting it run its full height down the page. */
 .il-suppgrid__scroll {
   overflow-x: auto;
+  overflow-y: hidden;
+  max-height: none;
+  /* Room for the horizontal scrollbar so it doesn't sit on the last row. */
+  padding-bottom: 0.25rem;
 }
 .il-suppgrid__scroll .il-table {
   min-width: 46rem;
+}
+.il-suppgrid__scroll .il-table th,
+.il-suppgrid__scroll .il-table td {
+  padding: 0.55rem 0.6rem;
+  vertical-align: top;
 }
 .il-table__slot {
   text-align: center;
@@ -1677,4 +1694,55 @@
 .il-hist__cell--blank {
   color: var(--text-muted);
   opacity: 0.45;
+}
+
+/* Assigning a recording to a client. */
+.il-assign__intro {
+  margin-bottom: 0.9rem;
+}
+/* Why a candidate is ranked where it is — a name heard in the session outranks
+   a booking that merely overlaps it. Shown so the ranking is auditable rather
+   than mysterious; it is a suggestion, never a decision. */
+.il-choice__why {
+  /* Own line under the name, indented past the radio so it reads as a note on
+     the choice rather than another column of data. */
+  flex-basis: 100%;
+  margin-left: 1.5rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--accent-active);
+}
+/* Confirmation copy in the action bar, before a destructive detach. */
+.il-detail__warn {
+  margin-right: auto;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  max-width: 34rem;
+}
+/* Why an action isn't on offer, where the action would otherwise sit. */
+.il-detail__note {
+  margin-right: auto;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  cursor: help;
+}
+
+/* Inputs inside the Supplement Protocol grid — the cell IS the field, so they
+   sit flush rather than looking like a form dropped into a table. */
+.il-input--cell {
+  padding: 0.3rem 0.4rem;
+  font-size: 0.82rem;
+  border-color: transparent;
+  background: transparent;
+}
+.il-input--cell:hover {
+  border-color: var(--border);
+}
+.il-input--cell:focus-visible {
+  background: var(--surface);
+  border-color: var(--accent);
+}
+.il-input--slot {
+  width: 6rem;
+  text-align: center;
 }

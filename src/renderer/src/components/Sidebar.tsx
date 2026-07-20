@@ -24,11 +24,13 @@ interface SidebarProps {
   active: ViewKey;
   counts: Partial<Record<ViewKey, number>>;
   onSelect: (v: ViewKey) => void;
+  collapsed: boolean;
+  onToggle: () => void;
 }
 
-export function Sidebar({ active, counts, onSelect }: SidebarProps) {
+export function Sidebar({ active, counts, onSelect, collapsed, onToggle }: SidebarProps) {
   return (
-    <nav className="il-sidebar">
+    <nav className={`il-sidebar ${collapsed ? 'il-sidebar--tight' : ''}`}>
       {NAV.map((n) => {
         const count = counts[n.key];
         return (
@@ -36,6 +38,10 @@ export function Sidebar({ active, counts, onSelect }: SidebarProps) {
             key={n.key}
             className={`il-nav ${active === n.key ? 'il-nav--on' : ''}`}
             onClick={() => onSelect(n.key)}
+            // Collapsed, the icon is the only label — the name has to stay
+            // reachable on hover and to assistive tech.
+            title={collapsed ? n.label : undefined}
+            aria-label={collapsed ? n.label : undefined}
           >
             <span className="il-nav__icon">{n.icon}</span>
             <span className="il-nav__label">{n.label}</span>
@@ -46,6 +52,17 @@ export function Sidebar({ active, counts, onSelect }: SidebarProps) {
           </button>
         );
       })}
+
+      <button
+        className="il-nav il-nav--toggle"
+        onClick={onToggle}
+        title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        aria-expanded={!collapsed}
+      >
+        <span className="il-nav__icon">{collapsed ? '»' : '«'}</span>
+        <span className="il-nav__label">Collapse</span>
+      </button>
     </nav>
   );
 }

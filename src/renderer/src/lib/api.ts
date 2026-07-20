@@ -1,4 +1,5 @@
 import type {
+  ClientSummary,
   PriorNote,
   AuthStatus,
   CandidateAppointment,
@@ -41,7 +42,16 @@ async function json<T>(url: string, init?: RequestInit): Promise<T> {
     onUnauthorized?.(); // login turned on (or token expired) — bounce to login
     throw new Error(`${init?.method ?? 'GET'} ${new URL(url).pathname} → 401`);
   }
-  if (!res.ok) throw new Error(`${init?.method ?? 'GET'} ${new URL(url).pathname} → ${res.status}`);
+  if (!res.ok) {
+    // The backend sends a human explanation ("This session has been approved and
+    // its documents published…"). Showing Nicole a URL and a status code instead
+    // tells her nothing about what went wrong or what to do next.
+    const detail = await res
+      .json()
+      .then((b: { detail?: string; error?: string }) => b.detail || b.error)
+      .catch(() => null);
+    throw new Error(detail || `${init?.method ?? 'GET'} ${new URL(url).pathname} → ${res.status}`);
+  }
   return (await res.json()) as T;
 }
 
@@ -125,6 +135,10 @@ interface ItemRow {
   status: string;
   content_json: SessionNote;
   updated_at: string;
+  /** False when detaching this session from its client can't succeed. */
+  can_unmatch?: boolean;
+  /** Why not — shown instead of offering an action that would only fail. */
+  unmatch_blocked_reason?: string | null;
 }
 
 /** Full row (with content_json) for one sheet/protocol. */
@@ -183,6 +197,63 @@ export function fetchSessionHistory(
   return json<{ total: number; sessions: PriorNote[] }>(
     `${backendUrl}/review/${kind}/${id}/history`,
   );
+}
+
+/** Clients for the walk-in picker, most recently seen first. */
+export function fetchClients(
+  backendUrl: string,
+  q?: string,
+  signal?: AbortSignal,
+): Promise<{ clients: ClientSummary[] }> {
+  const qs = q && q.trim() ? `?q=${encodeURIComponent(q.trim())}` : '';
+  return json<{ clients: ClientSummary[] }>(`${backendUrl}/clients${qs}`, { signal });
+}
+
+/**
+ * Assign a recording that never had a booking straight to a client. The backend
+ * creates the appointment from the recording's own time window.
+ */
+export function assignConversationToClient(
+  backendUrl: string,
+  conversationId: string,
+  clientId: string,
+): Promise<{ appointment_id: string; client_id: string; status: string }> {
+  return json(`${backendUrl}/review/unmatched/${conversationId}/assign-client`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ client_id: clientId }),
+  });
+}
+
+/**
+ * Detach a recording from the wrong client. Refused once the note is approved —
+ * its documents are already published, so that needs an amendment instead.
+ */
+export function unmatchConversation(
+  backendUrl: string,
+  conversationId: string,
+): Promise<{ status: string }> {
+  return json(`${backendUrl}/review/conversations/${conversationId}/unmatch`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: '{}',
+  });
+}
+
+/**
+ * Detach the session under review from its client, reached from the session
+ * itself — a wrong match is usually noticed while reading the note.
+ */
+export function unmatchReviewItem(
+  backendUrl: string,
+  kind: ReviewKind,
+  id: string,
+): Promise<{ status: string }> {
+  return json(`${backendUrl}/review/${kind}/${id}/unmatch`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: '{}',
+  });
 }
 
 export interface NoteRevision {

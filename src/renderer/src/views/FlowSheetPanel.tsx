@@ -22,6 +22,7 @@ import {
   LIFESTYLE_FIELDS,
 } from '../lib/flowSheetFields';
 import { formatDate } from '../lib/format';
+import { InfoPopover } from '../components/InfoPopover';
 
 function describeSupplements(note: SessionNote): string | null {
   if (!note.supplements.length) return null;
@@ -102,7 +103,19 @@ export function FlowSheetPanel({ note, prior }: { note: SessionNote; prior: Prio
     <div className="il-fs">
       <div className="il-fs__head">
         <p className="il-fs__coverage">
-          <strong>{filled}</strong> of {total} fields captured from this session
+          <strong>{filled}</strong> of {total} fields captured from this session{' '}
+          <InfoPopover label="What the marks mean" title="Reading this panel">
+            Each row is one field on your Appointment Flow Sheet.
+            <br />
+            <br />
+            A <strong>filled dot</strong> means the session recorded something for it. An{' '}
+            <strong>open ring</strong> means it didn't — the test wasn't run, or the client
+            never mentioned it.
+            <br />
+            <br />
+            Blanks are deliberate. Nothing is ever guessed from the recording, so an empty
+            field is a true "not covered", not a failure to read it.
+          </InfoPopover>
         </p>
         {prior ? (
           <p className="il-fs__compare">
