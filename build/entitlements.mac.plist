@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- Electron runs V8, which JITs. Under the hardened runtime (required for
+       notarization) the app cannot allocate executable memory without this, and
+       will crash on launch rather than fail to sign. -->
+  <key>com.apple.security.cs.allow-jit</key>
+  <true/>
+  <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+  <true/>
+
+  <!-- The bundled Bee CLI is run through Electron's own Node runtime, which
+       means loading a script the signature doesn't cover. -->
+  <key>com.apple.security.cs.allow-dyld-environment-variables</key>
+  <true/>
+  <key>com.apple.security.cs.disable-library-validation</key>
+  <true/>
+
+  <!-- Talks to the hosted backend and to Bee. -->
+  <key>com.apple.security.network.client</key>
+  <true/>
+</dict>
+</plist>

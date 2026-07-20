@@ -13,7 +13,7 @@
 
   /* Typography */
   --font-heading: 'Libre Baskerville', Georgia, 'Times New Roman', serif;
-  --font-body: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-body: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 
   /* Radii / shadows / spacing */
   --radius-sm: 6px;
@@ -71,4 +71,19 @@
 
   --scroll-thumb: rgba(184, 162, 142, 0.26);
   --scroll-thumb-hover: rgba(184, 162, 142, 0.5);
+}
+
+/* Numbers that sit in columns must align on their digits. Proportional figures
+   put a "1" narrower than a "6", so a column of quantities or doses reads as
+   ragged and is genuinely harder to scan for the odd one out. Source Sans 3
+   ships real tabular figures; this asks for them wherever numbers are tabulated
+   rather than set in prose. */
+.il-table,
+.il-hist__table,
+.il-nav__count,
+.il-stat__value,
+.il-fs__coverage,
+.il-input--slot {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
 }

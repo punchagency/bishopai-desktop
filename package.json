@@ -2,7 +2,7 @@
   "name": "innerlume-desktop",
   "version": "0.1.0",
   "private": true,
-  "description": "Innerlume desktop app — review dashboard + Bee courier (Electron)",
+  "description": "Innerlume desktop app \u2014 review dashboard + Bee courier (Electron)",
   "main": "./out/main/index.js",
   "author": "Bishop AI",
   "scripts": {
@@ -43,7 +43,12 @@
         }
       ],
       "category": "public.app-category.medical",
-      "icon": "build/icon.png"
+      "icon": "build/icon.png",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "notarize": false
     },
     "win": {
       "target": "nsis",

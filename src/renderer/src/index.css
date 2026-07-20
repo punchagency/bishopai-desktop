@@ -542,3 +542,13 @@ h3 {
     transition: none;
   }
 }
+
+/* ── macOS ────────────────────────────────────────────────────────────────
+   The window uses titleBarStyle: 'hiddenInset', which drops the native title
+   bar but keeps the close/minimise/zoom buttons floating over the top-left of
+   our own content. Without reserving that space the traffic lights sit on top
+   of the Innerlume logo. Windows and Linux keep a real title bar and ignore
+   the setting, so this is scoped to darwin only. */
+:root[data-platform='darwin'] .il-topbar {
+  padding-left: 88px;
+}

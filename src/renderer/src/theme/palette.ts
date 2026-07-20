@@ -2,7 +2,7 @@
  * Innerlume brand palette — lifted from innerlumehealing.com.
  *
  * The site's real accent is a warm terracotta (Squarespace `--accent-hsl`), with
- * Libre Baskerville headings + Montserrat body. These are the *raw brand tokens*;
+ * Libre Baskerville headings + Source Sans 3 body. These are the *raw brand tokens*;
  * the applied light/dark theme (semantic variables) lives in `theme.css`. Keep
  * this file the single source of truth for the brand hues.
  */
@@ -16,7 +16,7 @@ export const brand = {
 
 export const fonts = {
   heading: "'Libre Baskerville', Georgia, 'Times New Roman', serif",
-  body: "'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+  body: "'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
 } as const;
 
 export type ThemeMode = 'light' | 'dark' | 'system';

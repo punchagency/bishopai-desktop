@@ -6,15 +6,9 @@
     <!-- Locked-down CSP: only self + the local backend; no remote scripts. -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' http://localhost:3000 https:; img-src 'self' data:;"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self' http://localhost:3000 https:; img-src 'self' data:;"
     />
     <title>Innerlume</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
   </head>
   <body>
     <div id="root"></div>
