@@ -63,9 +63,14 @@ export function fetchReviewQueue(
   backendUrl: string,
   signal?: AbortSignal,
   scope: 'pending' | 'approved' = 'pending',
+  query?: string,
 ): Promise<ReviewQueue> {
-  const q = scope === 'approved' ? '?status=approved' : '';
-  return json<ReviewQueue>(`${backendUrl}/review/queue${q}`, { signal });
+  const params = new URLSearchParams();
+  if (scope === 'approved') params.set('status', 'approved');
+  const q = query?.trim();
+  if (q) params.set('q', q);
+  const qs = params.toString();
+  return json<ReviewQueue>(`${backendUrl}/review/queue${qs ? `?${qs}` : ''}`, { signal });
 }
 
 /** Consolidated Overview data (stats + activity + upcoming). */
@@ -111,6 +116,15 @@ export function fetchUnmatched(
   signal?: AbortSignal,
 ): Promise<{ conversations: UnmatchedConversation[] }> {
   return json(`${backendUrl}/review/unmatched`, { signal });
+}
+
+/** One unmatched recording in full (whole transcript + timing) for the detail pane. */
+export function fetchUnmatchedDetail(
+  backendUrl: string,
+  id: string,
+  signal?: AbortSignal,
+): Promise<{ conversation: import('./types').UnmatchedDetail }> {
+  return json(`${backendUrl}/review/unmatched/${id}`, { signal });
 }
 
 /** Appointments offered as match candidates for an unmatched conversation. */
@@ -508,6 +522,31 @@ export function sendRefillOrders(backendUrl: string, refillIds: string[]): Promi
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ refill_ids: refillIds }),
   });
+}
+
+// --- Audit trail / activity ---------------------------------------------------
+
+/** Global activity feed, newest first. Optional entity-type filter. */
+export function fetchActivity(
+  backendUrl: string,
+  opts?: { type?: string; limit?: number },
+  signal?: AbortSignal,
+): Promise<{ events: import('./types').AuditEvent[] }> {
+  const params = new URLSearchParams();
+  if (opts?.type) params.set('type', opts.type);
+  if (opts?.limit) params.set('limit', String(opts.limit));
+  const qs = params.toString();
+  return json(`${backendUrl}/audit${qs ? `?${qs}` : ''}`, { signal });
+}
+
+/** One entity's history (e.g. a checkout or session), newest first. */
+export function fetchEntityHistory(
+  backendUrl: string,
+  entityType: string,
+  entityId: string,
+  signal?: AbortSignal,
+): Promise<{ events: import('./types').AuditEvent[] }> {
+  return json(`${backendUrl}/audit/${entityType}/${entityId}`, { signal });
 }
 
 // --- Tasks + prep brief -------------------------------------------------------

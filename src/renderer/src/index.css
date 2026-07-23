@@ -71,6 +71,14 @@ h3 {
   flex: 1;
   overflow-y: auto;
   padding: 1.6rem 1.9rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.il-view {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
 }
 
 /* Sidebar */
@@ -95,7 +103,7 @@ h3 {
   background: transparent;
   color: var(--text-muted);
   font-family: var(--font-body);
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
   text-align: left;
@@ -119,14 +127,14 @@ h3 {
 .il-nav__count {
   background: var(--accent);
   color: var(--on-accent);
-  font-size: 0.72rem;
+  font-size: 0.77rem;
   min-width: 18px;
   text-align: center;
   padding: 0.05rem 0.35rem;
   border-radius: 999px;
 }
 .il-pill {
-  font-size: 0.62rem;
+  font-size: 0.67rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   padding: 0.1rem 0.4rem;
@@ -193,12 +201,12 @@ h3 {
   color: var(--text);
 }
 .il-stat__label {
-  font-size: 0.78rem;
+  font-size: 0.83rem;
   color: var(--text-muted);
   font-weight: 600;
 }
 .il-stat__hint {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   color: var(--text-muted);
   opacity: 0.8;
 }
@@ -238,7 +246,7 @@ h3 {
   gap: 0.6rem;
   padding: 0.5rem 0;
   border-top: 1px solid var(--border);
-  font-size: 0.85rem;
+  font-size: 0.9rem;
 }
 .il-feed__row:first-child {
   border-top: none;
@@ -248,7 +256,7 @@ h3 {
   color: var(--text);
 }
 .il-feed__meta {
-  font-size: 0.72rem;
+  font-size: 0.77rem;
   color: var(--text-muted);
   white-space: nowrap;
 }
@@ -257,7 +265,7 @@ h3 {
 .il-notice {
   border-radius: var(--radius-md);
   padding: 0.7rem 0.9rem;
-  font-size: 0.83rem;
+  font-size: 0.88rem;
   margin-bottom: 1.2rem;
   border: 1px solid var(--border);
 }
@@ -282,13 +290,13 @@ h3 {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  font-size: 0.78rem;
+  font-size: 0.83rem;
   color: var(--text-muted);
 }
 
 /* Transcript preview (unmatched) */
 .il-preview {
-  font-size: 0.82rem;
+  font-size: 0.87rem;
   color: var(--text-muted);
   line-height: 1.45;
   margin: 0 0 0.8rem;
@@ -308,7 +316,7 @@ h3 {
   background: var(--accent-soft);
   color: var(--accent-active);
   border-bottom: 1px solid var(--border);
-  font-size: 0.87rem;
+  font-size: 0.92rem;
 }
 
 .il-view__head {
@@ -321,7 +329,7 @@ h3 {
 .il-view__sub {
   margin: 0;
   color: var(--text-muted);
-  font-size: 0.88rem;
+  font-size: 0.93rem;
   display: flex;
   align-items: center;
 }
@@ -342,7 +350,7 @@ h3 {
   color: var(--text-muted);
   text-align: center;
   padding: 3rem 0;
-  font-size: 0.95rem;
+  font-size: 1rem;
 }
 
 /* ── Buttons ──────────────────────────────────────────────────────────────── */
@@ -354,7 +362,7 @@ h3 {
   border-radius: var(--radius-md);
   border: none;
   font-family: var(--font-body);
-  font-size: 0.875rem;
+  font-size: 0.925rem;
   font-weight: 600;
   cursor: pointer;
   transition:
@@ -418,7 +426,7 @@ h3 {
 
 /* ── Prose (rendered markdown — Review preview panel) ─────────────────────── */
 .il-prose {
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   line-height: 1.65;
   color: var(--text);
   padding: 0.25rem 0.1rem;
@@ -445,7 +453,7 @@ h3 {
   margin: 0.3rem 0;
   color: var(--text-muted);
   font-style: italic;
-  font-size: 0.83rem;
+  font-size: 0.88rem;
 }
 .il-prose ul {
   margin: 0.2rem 0 0.6rem;
@@ -469,7 +477,7 @@ h3 {
 .il-prose table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.83rem;
+  font-size: 0.88rem;
   margin: 0.4rem 0 0.8rem;
 }
 .il-prose th {
@@ -478,7 +486,7 @@ h3 {
   background: var(--surface-2);
   color: var(--text-muted);
   font-weight: 600;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   border-bottom: 1px solid var(--border);

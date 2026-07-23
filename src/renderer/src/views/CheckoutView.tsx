@@ -8,6 +8,7 @@ import { humanize } from '../lib/format';
 import { SkeletonView } from '../components/Skeleton';
 import { EmptyState } from '../components/EmptyState';
 import { InfoPopover } from '../components/InfoPopover';
+import { HistoryPanel } from '../components/HistoryPanel';
 import type { CheckoutData, CheckoutItem } from '../lib/types';
 
 // WF2 (§6): the one custom, auditable money flow. Two Nicole actions — approve
@@ -72,6 +73,8 @@ export function CheckoutView({ backendUrl, onChanged }: { backendUrl: string; on
   // (never persisted) as soon as the charge is submitted.
   const [cardFor, setCardFor] = useState<string | null>(null);
   const [card, setCard] = useState<CardInput>({ number: '', expMonth: '', expYear: '', cvc: '', name: '' });
+  const [showHistory, setShowHistory] = useState<Record<string, boolean>>({});
+  const toggleHistory = (id: string) => setShowHistory((prev) => ({ ...prev, [id]: !prev[id] }));
   const resetCard = () => {
     setCardFor(null);
     setCard({ number: '', expMonth: '', expYear: '', cvc: '', name: '' });
@@ -219,17 +222,24 @@ export function CheckoutView({ backendUrl, onChanged }: { backendUrl: string; on
                 {c.status === 'CLOSED' && c.qb_txn_id && (
                   <span className="il-card__meta">Receipt · {c.qb_txn_id.slice(0, 22)}</span>
                 )}
+                <Button variant="ghost" type="button" onClick={() => toggleHistory(c.id)}>
+                  {showHistory[c.id] ? 'Hide History' : 'History'}
+                </Button>
               </div>
+              {showHistory[c.id] && (
+                <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--il-color-border-subtle)' }}>
+                  <HistoryPanel backendUrl={backendUrl} entityType="checkout" entityId={c.id} />
+                </div>
+              )}
             </Card>
           );
         })}
       </div>
 
       {d.checkouts.length === 0 && (
-        <EmptyState icon="＄" title="No checkouts yet">
-          A checkout appears here when a session is marked complete in Practice Better — with the
-          session fee and any supplements ready to review and charge.
-        </EmptyState>
+        <div className="il-view__empty">
+          <EmptyState variant="checkout" />
+        </div>
       )}
     </section>
   );

@@ -216,10 +216,9 @@ export function RefillsView({ backendUrl, onChanged }: { backendUrl: string; onC
       </div>
 
       {d.refills.length === 0 && (
-        <EmptyState icon="↻" title="No refills due">
-          Clients appear here as their supplements run low — usually within about two weeks of running
-          out, projected nightly from each supplement's dose and quantity.
-        </EmptyState>
+        <div className="il-view__empty">
+          <EmptyState variant="refills" />
+        </div>
       )}
     </section>
   );

@@ -3,6 +3,7 @@ import { Card } from '../components/Card';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { InfoPopover } from '../components/InfoPopover';
+import { SearchBar } from '../components/SearchBar';
 import { clearCustomerMap, fetchCustomerMap, setCustomerMap, syncCustomerMap } from '../lib/api';
 import type { CustomerMapData, CustomerSyncReport } from '../lib/types';
 
@@ -17,6 +18,7 @@ export function CustomerMapCard({ backendUrl }: { backendUrl: string }) {
   const [report, setReport] = useState<CustomerSyncReport | null>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
 
   const load = useCallback(
     () =>
@@ -68,6 +70,15 @@ export function CustomerMapCard({ backendUrl }: { backendUrl: string }) {
   const configured = data?.quickbooks_configured ?? false;
   const mappedCount = data?.clients.filter((c) => c.qbo_customer_id).length ?? 0;
   const total = data?.clients.length ?? 0;
+  // Filter by name or email over the loaded list — this screen shows every client,
+  // so it's the one guaranteed to be long.
+  const needle = query.trim().toLowerCase();
+  const clients = (data?.clients ?? []).filter(
+    (c) =>
+      !needle ||
+      c.client_name.toLowerCase().includes(needle) ||
+      (c.email ?? '').toLowerCase().includes(needle),
+  );
 
   return (
     <Card
@@ -123,8 +134,18 @@ export function CustomerMapCard({ backendUrl }: { backendUrl: string }) {
             </div>
           ))}
 
+          {total > 6 && (
+            <SearchBar
+              value={query}
+              onChange={setQuery}
+              placeholder="Search by name or email"
+              count={clients.length}
+              total={total}
+            />
+          )}
+
           <div className="il-maplist">
-            {(data?.clients ?? []).map((c) => (
+            {clients.map((c) => (
               <div key={c.client_id} className="il-maprow">
                 <div className="il-maprow__who">
                   <span className="il-maprow__name">{c.client_name}</span>
@@ -153,6 +174,9 @@ export function CustomerMapCard({ backendUrl }: { backendUrl: string }) {
               </div>
             ))}
             {total === 0 && <p className="il-view__sub">No clients yet.</p>}
+            {total > 0 && clients.length === 0 && (
+              <p className="il-view__sub">No clients match "{query.trim()}".</p>
+            )}
           </div>
         </>
       )}

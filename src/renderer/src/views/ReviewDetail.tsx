@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Markdown } from '../components/Markdown';
 import { Button } from '../components/Button';
 import { Badge } from '../components/Badge';
@@ -21,6 +21,7 @@ import { NoteEditor } from './NoteEditor';
 import { FlowSheetPanel } from './FlowSheetPanel';
 import { SupplementProtocolPanel } from './SupplementProtocolPanel';
 import { SessionHistoryPanel } from './SessionHistoryPanel';
+import { HistoryPanel } from '../components/HistoryPanel';
 
 interface Props {
   backendUrl: string;
@@ -43,6 +44,9 @@ export function ReviewDetail({ backendUrl, kind, id, clientName, onClose, onChan
   const [error, setError] = useState<string | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [status, setStatus] = useState<string>('');
+  const [autoSaveState, setAutoSaveState] = useState<'idle' | 'dirty' | 'saving' | 'saved' | 'error'>('idle');
+  const [lastSaved, setLastSaved] = useState<string | null>(null);
+  const savedNoteRef = useRef<string | null>(null);
   // An approved note is read-only: its documents are already in Drive and may be
   // with the client, so corrections go through Amend, which keeps the superseded
   // version and republishes deliberately.
@@ -82,6 +86,8 @@ export function ReviewDetail({ backendUrl, kind, id, clientName, onClose, onChan
     fetchItem(backendUrl, kind, id)
       .then((row) => {
         setNote(row.content_json);
+        savedNoteRef.current = JSON.stringify(row.content_json);
+        setAutoSaveState('idle');
         setStatus(row.status);
         setCanUnmatch(row.can_unmatch ?? false);
         setUnmatchBlocked(row.unmatch_blocked_reason ?? null);
@@ -108,6 +114,34 @@ export function ReviewDetail({ backendUrl, kind, id, clientName, onClose, onChan
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [backendUrl, kind, id]);
 
+  // Debounced background auto-save when editing draft notes
+  useEffect(() => {
+    if (!note || isSample || isApproved || amending) return;
+    const currentStr = JSON.stringify(note);
+    if (!savedNoteRef.current) {
+      savedNoteRef.current = currentStr;
+      return;
+    }
+    if (currentStr === savedNoteRef.current) return;
+
+    setAutoSaveState('dirty');
+    const timer = setTimeout(async () => {
+      setAutoSaveState('saving');
+      try {
+        await patchItem(backendUrl, kind, id, { content_json: note });
+        savedNoteRef.current = currentStr;
+        setAutoSaveState('saved');
+        setLastSaved(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+        loadPreview();
+        onChanged();
+      } catch {
+        setAutoSaveState('error');
+      }
+    }, 2200);
+
+    return () => clearTimeout(timer);
+  }, [note, backendUrl, kind, id, isSample, isApproved, amending]);
+
   const save = async () => {
     if (!note || isSample) return;
     // Belt and braces: the UI doesn't offer a plain save on an approved note,
@@ -129,6 +163,9 @@ export function ReviewDetail({ backendUrl, kind, id, clientName, onClose, onChan
       } else {
         await patchItem(backendUrl, kind, id, { content_json: note });
       }
+      savedNoteRef.current = JSON.stringify(note);
+      setAutoSaveState('saved');
+      setLastSaved(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
       loadPreview();
       // Saving from the grid should keep her on the grid to see the result.
       if (tab !== 'supplement') setTab('preview');
@@ -225,6 +262,12 @@ export function ReviewDetail({ backendUrl, kind, id, clientName, onClose, onChan
             Approving writes the internal record and the client's documents together.
           </InfoPopover>
           {isApproved && <Badge tone="success">Approved</Badge>}
+          {autoSaveState === 'dirty' && <span className="il-autosave il-autosave--dirty">Unsaved edits</span>}
+          {autoSaveState === 'saving' && <span className="il-autosave il-autosave--saving">Saving draft…</span>}
+          {autoSaveState === 'saved' && lastSaved && (
+            <span className="il-autosave il-autosave--saved">Draft saved {lastSaved}</span>
+          )}
+          {autoSaveState === 'error' && <span className="il-autosave il-autosave--error">Auto-save failed</span>}
         </div>
       </header>
 
@@ -288,12 +331,21 @@ export function ReviewDetail({ backendUrl, kind, id, clientName, onClose, onChan
       {tab === 'history' &&
         (note
           ? (
-            <SessionHistoryPanel
-              note={note}
-              sessions={history}
-              total={historyTotal}
-              loading={historyLoading}
-            />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div>
+                <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem', fontWeight: 600, color: 'var(--il-color-text-subtle)' }}>Audit Trail</h4>
+                <HistoryPanel backendUrl={backendUrl} entityType="session" entityId={id} />
+              </div>
+              <div>
+                <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem', fontWeight: 600, color: 'var(--il-color-text-subtle)' }}>Prior Sessions</h4>
+                <SessionHistoryPanel
+                  note={note}
+                  sessions={history}
+                  total={historyTotal}
+                  loading={historyLoading}
+                />
+              </div>
+            </div>
           )
           : <Pending failed={loadFailed} />)}
 

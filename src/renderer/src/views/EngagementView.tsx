@@ -9,6 +9,7 @@ import { humanize } from '../lib/format';
 import { SkeletonView } from '../components/Skeleton';
 import { EmptyState } from '../components/EmptyState';
 import { InfoPopover } from '../components/InfoPopover';
+import { SearchBar } from '../components/SearchBar';
 import type { EngagementData, EngagementLead, LeadActivityItem } from '../lib/types';
 
 // WF3: lead re-engagement + site activity. Leads show their next cadence step
@@ -45,6 +46,7 @@ export function EngagementView({ backendUrl, onChanged }: { backendUrl: string; 
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
+  const [query, setQuery] = useState('');
 
   const load = useCallback(
     (signal?: AbortSignal) => {
@@ -107,6 +109,15 @@ export function EngagementView({ backendUrl, onChanged }: { backendUrl: string; 
   const d = data ?? SAMPLE;
   const byStatus = (s: string) => d.leads.filter((l) => l.status === s).length;
   const dueCount = d.leads.filter((l) => l.next_action === 'send').length;
+  // Search by email or status; stats above stay whole-list counts on purpose.
+  const needle = query.trim().toLowerCase();
+  const leads = needle
+    ? d.leads.filter(
+        (l) =>
+          (l.email ?? '').toLowerCase().includes(needle) ||
+          l.status.toLowerCase().includes(needle),
+      )
+    : d.leads;
 
   const activityRows: FeedRow[] = activity.map((a) => ({
     id: a.id,
@@ -147,13 +158,23 @@ export function EngagementView({ backendUrl, onChanged }: { backendUrl: string; 
 
       <div className="il-cols">
         {d.leads.length === 0 ? (
-          <EmptyState icon="◐" title="No leads yet">
-            New enquiries flow in here from the website contact and booking forms, then move through the
-            welcome and re-booking cadence automatically.
-          </EmptyState>
+          <div className="il-view__empty">
+            <EmptyState variant="leads" />
+          </div>
         ) : (
-        <div className="il-grid">
-          {d.leads.map((l) => (
+        <div>
+          <SearchBar
+            value={query}
+            onChange={setQuery}
+            placeholder="Search by email or status"
+            count={leads.length}
+            total={d.leads.length}
+          />
+          {leads.length === 0 ? (
+            <p className="il-empty">No leads match "{query.trim()}".</p>
+          ) : (
+          <div className="il-grid">
+          {leads.map((l) => (
             <Card
               key={l.id}
               title={l.email ?? 'Unknown lead'}
@@ -180,6 +201,8 @@ export function EngagementView({ backendUrl, onChanged }: { backendUrl: string; 
               </div>
             </Card>
           ))}
+          </div>
+          )}
         </div>
         )}
         <Feed title="Live site activity" rows={activityRows} empty="No site activity yet." />

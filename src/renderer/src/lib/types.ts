@@ -207,6 +207,19 @@ export interface UnmatchedConversation {
   transcript_preview: string;
 }
 
+/** GET /review/unmatched/:id — one recording in full, for the detail pane. */
+export interface UnmatchedDetail {
+  id: string;
+  bee_id: string;
+  starts_at: string;
+  ends_at: string;
+  correlation_status: string | null;
+  extraction_status: string | null;
+  /** The whole recording, not the 240-char list preview. May be null (Bee sent
+   *  a session with no usable transcript — nothing to read, only timing to go on). */
+  transcript: string | null;
+}
+
 export interface CandidateAppointment {
   id: string;
   starts_at: string;
@@ -401,7 +414,20 @@ export type ViewKey =
   | 'refills'
   | 'engagement'
   | 'schedule'
+  | 'activity'
   | 'settings';
+
+// Unified audit trail (server/src/audit/log.ts).
+export interface AuditEvent {
+  id: string;
+  entity_type: string;
+  entity_id: string;
+  action: string;
+  actor: string;
+  summary: string;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+}
 export type WorkflowStatus = 'live' | 'pending' | 'planned';
 
 export interface OverviewStats {

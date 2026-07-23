@@ -9,6 +9,7 @@ import { CheckoutView } from './views/CheckoutView';
 import { RefillsView } from './views/RefillsView';
 import { EngagementView } from './views/EngagementView';
 import { ScheduleView } from './views/ScheduleView';
+import { ActivityView } from './views/ActivityView';
 import { SettingsView } from './views/SettingsView';
 import { Login } from './views/Login';
 import { fetchAuthStatus, fetchOverview, setAuthToken, setUnauthorizedHandler } from './lib/api';
@@ -158,6 +159,7 @@ export function App() {
           {view === 'refills' && <RefillsView backendUrl={backendUrl} onChanged={refreshCounts} />}
           {view === 'engagement' && <EngagementView backendUrl={backendUrl} onChanged={refreshCounts} />}
           {view === 'schedule' && <ScheduleView backendUrl={backendUrl} />}
+          {view === 'activity' && <ActivityView backendUrl={backendUrl} />}
           {view === 'settings' && (
             <SettingsView
               backendUrl={backendUrl}

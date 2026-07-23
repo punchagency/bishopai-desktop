@@ -3,7 +3,7 @@
 /* Button */
 .il-btn {
   font-family: var(--font-body);
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 600;
   line-height: 1;
   padding: 0.62rem 1.05rem;
@@ -55,7 +55,7 @@
 }
 /* For dense lists, where the default button would out-weigh the content. */
 .il-btn--sm {
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: 600;
   padding: 0.3rem 0.55rem;
   border-radius: var(--radius-sm);
@@ -68,8 +68,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  padding: 1.15rem 1.25rem;
-  overflow: hidden;
+  padding: 1.15rem 1.25rem 1.35rem;
 }
 .il-card__title {
   font-family: var(--font-heading);
@@ -79,7 +78,7 @@
   overflow-wrap: anywhere;
 }
 .il-card__meta {
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   color: var(--text-muted);
   margin: 0;
   overflow-wrap: anywhere;
@@ -89,7 +88,7 @@
 .il-badge {
   display: inline-flex;
   align-items: center;
-  font-size: 0.72rem;
+  font-size: 0.77rem;
   font-weight: 600;
   letter-spacing: 0.02em;
   padding: 0.22rem 0.55rem;
@@ -167,7 +166,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   color: var(--text-muted);
   -webkit-app-region: no-drag;
 }
@@ -235,7 +234,7 @@
 }
 .il-tab {
   font-family: var(--font-body);
-  font-size: 0.82rem;
+  font-size: 0.87rem;
   font-weight: 600;
   padding: 0.4rem 0.8rem;
   border-radius: var(--radius-md);
@@ -252,7 +251,7 @@
 /* Markdown preview */
 .il-markdown {
   font-family: var(--font-body);
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   line-height: 1.55;
   white-space: pre-wrap;
   word-break: break-word;
@@ -276,7 +275,7 @@
   gap: 0.4rem;
 }
 .il-field__label {
-  font-size: 0.78rem;
+  font-size: 0.83rem;
   font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -284,7 +283,7 @@
 }
 .il-input {
   font-family: var(--font-body);
-  font-size: 0.88rem;
+  font-size: 0.93rem;
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--border);
@@ -297,6 +296,107 @@
   box-shadow: var(--ring);
   border-color: var(--accent);
 }
+/* ── Activity timeline / entity history ───────────────────────────────────── */
+.il-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.il-timeline__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.6rem 0.2rem;
+  border-bottom: 1px solid var(--border);
+}
+.il-timeline__row:last-child {
+  border-bottom: none;
+}
+.il-timeline__row .il-dot {
+  margin-top: 0.35rem;
+  flex: none;
+}
+.il-timeline__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  flex: 1;
+}
+.il-timeline__summary {
+  font-size: 0.9rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.il-timeline__meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.il-timeline__time {
+  white-space: nowrap;
+}
+/* Compact variant for the per-entity History panel inside a detail pane. */
+.il-history {
+  margin-top: 0.4rem;
+}
+.il-history .il-timeline__row {
+  padding: 0.45rem 0;
+}
+
+/* ── Search / filter box ──────────────────────────────────────────────────── */
+.il-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.7rem;
+}
+.il-search__icon {
+  position: absolute;
+  left: 0.6rem;
+  color: var(--text-muted);
+  font-size: 1rem;
+  pointer-events: none;
+}
+.il-search__input {
+  padding-left: 1.9rem;
+  max-width: 22rem;
+}
+/* Kill the native search-cancel affordance — we render our own so it's styled
+   and reachable consistently across platforms. */
+.il-search__input::-webkit-search-cancel-button {
+  display: none;
+}
+.il-search__clear {
+  position: absolute;
+  left: calc(min(22rem, 100%) - 1.6rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.2rem;
+  height: 1.2rem;
+  border: none;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+.il-search__clear:hover {
+  color: var(--text);
+}
+.il-search__count {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
 .il-input--area {
   /* Clinical notes run to several lines — concerns, assessments and follow-ups
      are lists, not sentences. A 74px box showed two of them and made every field
@@ -321,6 +421,7 @@
   margin-top: 8px;
   max-height: 340px;
   overflow-y: auto;
+  padding-bottom: 6px;
 }
 .il-maprow {
   display: flex;
@@ -411,7 +512,7 @@
 }
 .il-fs__coverage {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   color: var(--text-muted);
 }
 .il-fs__coverage strong {
@@ -421,7 +522,7 @@
 }
 .il-fs__compare {
   margin: 0;
-  font-size: 0.76rem;
+  font-size: 0.81rem;
   color: var(--text-muted);
 }
 .il-fs__section {
@@ -463,17 +564,67 @@
   opacity: 0.55;
 }
 .il-fs__label {
-  font-size: 0.72rem;
+  font-size: 0.77rem;
   font-weight: 600;
   letter-spacing: 0.03em;
   text-transform: uppercase;
   color: var(--text-muted);
 }
+.il-fs__badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0.35rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 4px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  vertical-align: middle;
+}
+.il-fs__badge--changed {
+  background: color-mix(in srgb, var(--warning) 18%, transparent);
+  color: var(--warning);
+  border: 1px solid color-mix(in srgb, var(--warning) 32%, transparent);
+}
+.il-fs__badge--new {
+  background: color-mix(in srgb, var(--success) 18%, transparent);
+  color: var(--success);
+  border: 1px solid color-mix(in srgb, var(--success) 32%, transparent);
+}
+.il-autosave {
+  font-size: 0.78rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  transition: opacity 0.2s ease;
+  margin-left: 0.5rem;
+}
+.il-autosave--dirty {
+  color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 14%, transparent);
+}
+.il-autosave--saving {
+  color: var(--accent-active);
+  background: var(--accent-soft);
+}
+.il-autosave--saved {
+  color: var(--text-muted);
+  background: var(--surface-2);
+}
+.il-autosave--error {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+}
 .il-fs__values {
   min-width: 0;
 }
 .il-fs__value {
-  font-size: 0.88rem;
+  font-size: 0.93rem;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   color: var(--text);
@@ -490,7 +641,7 @@
   margin-top: 0.3rem;
   padding-left: 0.55rem;
   border-left: 2px solid var(--accent-soft);
-  font-size: 0.82rem;
+  font-size: 0.87rem;
   color: var(--text);
   opacity: 0.85;
   white-space: pre-wrap;
@@ -499,7 +650,7 @@
 .il-fs__priorTag {
   display: inline-block;
   margin-right: 0.4rem;
-  font-size: 0.64rem;
+  font-size: 0.69rem;
   font-weight: 700;
   letter-spacing: 0.07em;
   text-transform: uppercase;
@@ -530,18 +681,18 @@
   opacity: 0.85;
 }
 .il-suppgrid__inline {
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   color: var(--text-muted);
   margin: 0;
 }
 .il-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
 }
 .il-table th {
   text-align: left;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.03em;
   color: var(--text-muted);
@@ -559,11 +710,11 @@
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
 }
 .il-error {
   color: var(--danger);
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   margin-right: auto;
 }
 
@@ -599,7 +750,7 @@
   color: var(--text);
 }
 .il-choice__meta {
-  font-size: 0.78rem;
+  font-size: 0.83rem;
   color: var(--text-muted);
 }
 
@@ -629,7 +780,7 @@
 }
 .il-login__sub {
   margin: 0.25rem 0 0;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   color: var(--text-muted);
 }
 
@@ -708,18 +859,18 @@
 .il-info__title {
   display: block;
   font-weight: 700;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   color: var(--text);
   margin-bottom: 0.3rem;
 }
 .il-info__body {
   display: block;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   line-height: 1.45;
   color: var(--text-muted);
 }
 .il-info__body code {
-  font-size: 0.76rem;
+  font-size: 0.81rem;
   background: var(--surface-2);
   padding: 0.05rem 0.3rem;
   border-radius: var(--radius-sm);
@@ -735,14 +886,14 @@
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   color: var(--text);
 }
 .il-refill-result__errors {
   margin: 0.15rem 0 0;
   padding-left: 1.1rem;
   color: var(--text-muted);
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   line-height: 1.5;
 }
 .il-refill-result__dismiss {
@@ -750,14 +901,14 @@
   background: none;
   border: none;
   color: var(--text-muted);
-  font-size: 0.78rem;
+  font-size: 0.83rem;
   cursor: pointer;
   padding: 0;
   text-decoration: underline;
 }
 .il-card__note {
   margin: 0.55rem 0 0;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   color: var(--text-muted);
 }
 .il-card__note a {
@@ -1273,9 +1424,14 @@
    hidden behind what it opened. */
 .il-split {
   display: grid;
-  grid-template-columns: minmax(16rem, 24rem) 1fr;
+  grid-template-columns: minmax(12.8rem, 19.2rem) 1fr;
   gap: 1.1rem;
   align-items: start;
+}
+/* Unmatched rows carry only a time + preview, so a narrower list column reads
+   fine and hands the extra width to the transcript in the detail pane. */
+.il-split--unmatched {
+  grid-template-columns: minmax(13rem, 18rem) 1fr;
 }
 .il-split__list {
   display: flex;
@@ -1458,6 +1614,60 @@
 /* The back button only earns its place once the panes stack. */
 .il-detail__head .il-btn--ghost {
   display: none;
+}
+
+/* ── Unmatched recording detail ───────────────────────────────────────────── */
+/* Recording facts (time, length, Bee id) as a compact definition list above the
+   transcript — a label column narrow enough that the values line up to read down. */
+.il-meta {
+  margin: 0 0 1.2rem;
+  display: grid;
+  gap: 0.3rem;
+}
+.il-meta__row {
+  display: grid;
+  grid-template-columns: 6.5rem 1fr;
+  gap: 0.6rem;
+  align-items: baseline;
+}
+.il-meta__row dt {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+.il-meta__row dd {
+  margin: 0;
+  font-size: 0.88rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.il-meta__mono {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.il-detail__section {
+  margin: 0 0 0.5rem;
+  font-family: var(--font-heading);
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+/* The transcript can run long — hold it in a scrolling panel so the sticky
+   assign footer stays put rather than being pushed off the bottom of the pane. */
+.il-transcript {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  max-height: 50vh;
+  overflow-y: auto;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
 }
 
 @media (max-width: 900px) {
@@ -1746,3 +1956,58 @@
   width: 6rem;
   text-align: center;
 }
+
+/* ── Empty State ──────────────────────────────────────────────────────────── */
+.il-view__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: 320px;
+  width: 100%;
+}
+
+.il-emptystate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2.2rem 1.8rem;
+  margin: auto;
+  max-width: 32rem;
+  width: 100%;
+}
+.il-emptystate__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--accent-active);
+  margin-bottom: 1rem;
+}
+.il-emptystate__icon svg {
+  display: block;
+}
+.il-emptystate__title {
+  font-family: var(--font-heading);
+  font-size: 1.08rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 0.35rem;
+}
+.il-emptystate__body {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  max-width: 28rem;
+  margin: 0 0 0.8rem;
+  line-height: 1.5;
+}
+.il-emptystate__action {
+  margin-top: 0.5rem;
+}
+

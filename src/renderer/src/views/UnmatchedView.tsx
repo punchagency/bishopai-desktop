@@ -1,20 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Card } from '../components/Card';
 import { Badge } from '../components/Badge';
-import { Button } from '../components/Button';
 import { fetchUnmatched } from '../lib/api';
-import { humanize } from '../lib/format';
+import { formatDate } from '../lib/format';
 import { EmptyState } from '../components/EmptyState';
 import { InfoPopover } from '../components/InfoPopover';
 import type { UnmatchedConversation } from '../lib/types';
-import { MatchModal } from './MatchModal';
+import { UnmatchedDetail } from './UnmatchedDetail';
 
 const SAMPLE: UnmatchedConversation[] = [
   {
     id: 's1',
     bee_id: 'bee-unmatched-1',
     starts_at: new Date(Date.now() - 3 * 3600e3).toISOString(),
-    ends_at: new Date().toISOString(),
+    ends_at: new Date(Date.now() - 2.5 * 3600e3).toISOString(),
     correlation_status: 'unmatched',
     transcript_preview: 'Nicole: quick chat about supplement timing. Client: I take them at night.',
   },
@@ -23,7 +21,7 @@ const SAMPLE: UnmatchedConversation[] = [
 export function UnmatchedView({ backendUrl, onChanged }: { backendUrl: string; onChanged?: () => void }) {
   const [rows, setRows] = useState<UnmatchedConversation[] | null>(null);
   const [offline, setOffline] = useState(false);
-  const [matching, setMatching] = useState<UnmatchedConversation | null>(null);
+  const [selected, setSelected] = useState<UnmatchedConversation | null>(null);
 
   const load = useCallback(
     (signal?: AbortSignal) =>
@@ -31,6 +29,11 @@ export function UnmatchedView({ backendUrl, onChanged }: { backendUrl: string; o
         .then((d) => {
           setRows(d.conversations);
           setOffline(false);
+          // Drop a selection whose recording is gone — matched away, or reseeded
+          // underneath us — so the detail pane never sits on a dead id.
+          setSelected((cur) =>
+            cur && d.conversations.some((c) => c.id === cur.id) ? cur : null,
+          );
         })
         .catch(() => {
           setRows(SAMPLE);
@@ -60,48 +63,85 @@ export function UnmatchedView({ backendUrl, onChanged }: { backendUrl: string; o
             </InfoPopover>
           </h1>
           <p className="il-view__sub">
-            Bee conversations we couldn't tie to an appointment — tag the client manually (we never
-            auto-guess){offline && ' · offline preview'}
+            Bee conversations we couldn't tie to an appointment — open one to read it in full and tag
+            the client (we never auto-guess){offline && ' · offline preview'}
           </p>
         </div>
       </div>
 
       {list.length === 0 ? (
-        <EmptyState title="Everything's matched">
-          Bee conversations we can't automatically tie to an appointment land here so you can tag the
-          client by hand. There's nothing waiting right now.
-        </EmptyState>
+        <div className="il-view__empty">
+          <EmptyState variant="unmatched" />
+        </div>
       ) : (
-        <div className="il-grid">
-          {list.map((c) => (
-            <Card
-              key={c.id}
-              title={new Date(c.starts_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-              meta={`${c.bee_id}`}
-              actions={<Badge tone="warning">{humanize(c.correlation_status ?? 'unmatched')}</Badge>}
-            >
-              <p className="il-preview">{c.transcript_preview || '(no transcript)'}</p>
-              <div className="il-card__row">
-                <Button variant="secondary" onClick={() => setMatching(c)}>
-                  Match to appointment
-                </Button>
+        /* Split pane: the recordings list stays on screen while one is open, so
+           Nicole keeps her place. Collapses to one column on narrow windows. */
+        <div className={`il-split il-split--unmatched ${selected ? 'il-split--open' : ''}`}>
+          <div className="il-split__list">
+            {list.map((c) => (
+              <UnmatchedRow
+                key={c.id}
+                conversation={c}
+                active={selected?.id === c.id}
+                onOpen={() => setSelected(c)}
+              />
+            ))}
+          </div>
+
+          <div className="il-split__detail">
+            {selected ? (
+              <UnmatchedDetail
+                key={selected.id}
+                backendUrl={backendUrl}
+                conversation={selected}
+                onClose={() => setSelected(null)}
+                onMatched={() => {
+                  load();
+                  onChanged?.();
+                }}
+              />
+            ) : (
+              <div className="il-split__placeholder">
+                <p>Pick a recording to read it here.</p>
               </div>
-            </Card>
-          ))}
+            )}
+          </div>
         </div>
       )}
-
-      {matching && (
-        <MatchModal
-          backendUrl={backendUrl}
-          conversation={matching}
-          onClose={() => setMatching(null)}
-          onMatched={() => {
-            load();
-            onChanged?.();
-          }}
-        />
-      )}
     </section>
+  );
+}
+
+/**
+ * One line in the recordings list. Time first — that's how Nicole places a
+ * recording — with a short preview underneath, dialled down to a scannable row.
+ */
+function UnmatchedRow({
+  conversation,
+  active,
+  onOpen,
+}: {
+  conversation: UnmatchedConversation;
+  active: boolean;
+  onOpen: () => void;
+}) {
+  const time = new Date(conversation.starts_at).toLocaleString([], {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  return (
+    <div className={`il-qrow ${active ? 'il-qrow--on' : ''}`}>
+      <button className="il-qrow__main" onClick={onOpen} aria-current={active}>
+        <span className="il-qrow__status il-qrow__status--in_review" title="Unmatched" />
+        <span className="il-qrow__text">
+          <span className="il-qrow__name" title={formatDate(conversation.starts_at)}>{time}</span>
+          <span className="il-qrow__meta" title={conversation.transcript_preview}>
+            {conversation.transcript_preview || '(no transcript)'}
+          </span>
+        </span>
+      </button>
+    </div>
   );
 }

@@ -46,19 +46,28 @@ function Row({
   label,
   value,
   prior,
+  hasPriorSession = false,
   placeholder = NOT_STATED,
 }: {
   label: string;
   value?: string | null;
   prior?: string | null;
+  hasPriorSession?: boolean;
   placeholder?: string;
 }) {
   const v = clean(value);
   const p = clean(prior);
+  const isChanged = Boolean(v && p && v !== p);
+  const isNew = Boolean(v && !p && hasPriorSession);
+
   return (
     <div className={`il-fs__row ${v ? '' : 'il-fs__row--blank'}`}>
       <span className="il-fs__mark" aria-hidden="true" />
-      <div className="il-fs__label">{label}</div>
+      <div className="il-fs__label">
+        {label}
+        {isChanged && <span className="il-fs__badge il-fs__badge--changed">Δ Changed</span>}
+        {isNew && <span className="il-fs__badge il-fs__badge--new">+ New</span>}
+      </div>
       <div className="il-fs__values">
         <div className={v ? 'il-fs__value' : 'il-fs__value il-fs__value--blank'}>
           {v ?? placeholder}
@@ -97,6 +106,7 @@ function coverage(note: SessionNote): { filled: number; total: number } {
 
 export function FlowSheetPanel({ note, prior }: { note: SessionNote; prior: PriorNote | null }) {
   const p = prior?.note;
+  const hasPriorSession = Boolean(prior);
   const { filled, total } = coverage(note);
 
   return (
@@ -135,6 +145,7 @@ export function FlowSheetPanel({ note, prior }: { note: SessionNote; prior: Prio
             label={f.label}
             value={note.lifestyle?.[f.key]}
             prior={p?.lifestyle?.[f.key]}
+            hasPriorSession={hasPriorSession}
             placeholder={NOT_MENTIONED}
           />
         ))}
@@ -145,6 +156,7 @@ export function FlowSheetPanel({ note, prior }: { note: SessionNote; prior: Prio
           label="Reported"
           value={note.concerns.join('; ')}
           prior={p?.concerns.join('; ')}
+          hasPriorSession={hasPriorSession}
         />
       </Section>
 
@@ -155,6 +167,7 @@ export function FlowSheetPanel({ note, prior }: { note: SessionNote; prior: Prio
             label={f.label}
             value={note.nrt?.foundation?.[f.key]}
             prior={p?.nrt?.foundation?.[f.key]}
+            hasPriorSession={hasPriorSession}
             placeholder="Not tested this session"
           />
         ))}
@@ -167,6 +180,7 @@ export function FlowSheetPanel({ note, prior }: { note: SessionNote; prior: Prio
             label={f.label}
             value={note.nrt?.body_scan?.[f.key]}
             prior={p?.nrt?.body_scan?.[f.key]}
+            hasPriorSession={hasPriorSession}
             placeholder="Not tested this session"
           />
         ))}
@@ -177,9 +191,11 @@ export function FlowSheetPanel({ note, prior }: { note: SessionNote; prior: Prio
           label="Changes"
           value={describeSupplements(note)}
           prior={p ? describeSupplements(p) : null}
+          hasPriorSession={hasPriorSession}
           placeholder="No supplement changes"
         />
       </Section>
     </div>
   );
 }
+

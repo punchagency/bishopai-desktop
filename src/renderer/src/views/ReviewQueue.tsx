@@ -7,6 +7,7 @@ import { formatDate, humanize } from '../lib/format';
 import { SkeletonView } from '../components/Skeleton';
 import { EmptyState } from '../components/EmptyState';
 import { InfoPopover } from '../components/InfoPopover';
+import { SearchBar } from '../components/SearchBar';
 import type { ReviewKind, ReviewQueue as Queue } from '../lib/types';
 import { ReviewDetail } from './ReviewDetail';
 
@@ -49,11 +50,15 @@ export function ReviewQueue({ backendUrl, onChanged }: { backendUrl: string; onC
   // Approved sessions used to disappear from the app entirely. This is how a
   // finished session stays reachable — to look back at, or to correct.
   const [scope, setScope] = useState<'pending' | 'approved'>('pending');
+  // Search only earns its place on the Approved archive — the growing list where
+  // finding one client's past visit means scrolling. Pending is a daily handful.
+  const [query, setQuery] = useState('');
 
   const load = useCallback(
     (signal?: AbortSignal) => {
       setLoading(true);
-      return fetchReviewQueue(backendUrl, signal, scope)
+      // Search is approved-only; pending never carries a query.
+      return fetchReviewQueue(backendUrl, signal, scope, scope === 'approved' ? query : undefined)
         .then((q) => {
           setQueue(q);
           setOffline(false);
@@ -70,12 +75,14 @@ export function ReviewQueue({ backendUrl, onChanged }: { backendUrl: string; onC
         })
         .finally(() => setLoading(false));
     },
-    [backendUrl, scope],
+    [backendUrl, scope, query],
   );
 
   useEffect(() => {
     const ctrl = new AbortController();
-    load(ctrl.signal);
+    // Debounce typing so we don't fire a request per keystroke; scope switches
+    // and the first load (no query) run immediately.
+    const t = setTimeout(() => load(ctrl.signal), query ? 250 : 0);
     // The sidebar badge polls, so without this the list can sit stale beside a
     // count that has already moved — new sessions land here while the screen is
     // open. Refreshing the list doesn't touch the open detail pane, so it's safe
@@ -83,13 +90,15 @@ export function ReviewQueue({ backendUrl, onChanged }: { backendUrl: string; onC
     const timer = setInterval(() => load(), 30_000);
     return () => {
       ctrl.abort();
+      clearTimeout(t);
       clearInterval(timer);
     };
-  }, [load]);
+  }, [load, query]);
 
   const switchScope = (next: 'pending' | 'approved') => {
     if (next === scope) return;
     setSelected(null); // the open row won't be in the new list
+    setQuery(''); // a filter from the other tab would silently hide everything
     setScope(next);
   };
 
@@ -112,7 +121,11 @@ export function ReviewQueue({ backendUrl, onChanged }: { backendUrl: string; onC
   if (loading && !queue) return <SkeletonView cards={6} />;
 
   const q = queue ?? SAMPLE;
-  const total = q.sessions.length;
+  // Filtering is server-side now (so a name search reaches the whole archive,
+  // not just the recent page), so the returned rows are already the result set.
+  const sessions = q.sessions;
+  const total = sessions.length;
+  const searching = scope === 'approved' && query.trim().length > 0;
 
   return (
     <section className="il-view">
@@ -129,9 +142,11 @@ export function ReviewQueue({ backendUrl, onChanged }: { backendUrl: string; onC
             </InfoPopover>
           </h1>
           <p className="il-view__sub">
-            {scope === 'pending'
-              ? `${total} item${total === 1 ? '' : 's'} awaiting your approval`
-              : `${total} approved item${total === 1 ? '' : 's'}`}
+            {searching
+              ? `${total} match${total === 1 ? '' : 'es'} for "${query.trim()}"`
+              : scope === 'pending'
+                ? `${total} item${total === 1 ? '' : 's'} awaiting your approval`
+                : `${total} approved item${total === 1 ? '' : 's'}`}
             {offline && <Badge tone="warning">&nbsp;offline preview&nbsp;</Badge>}
           </p>
         </div>
@@ -152,25 +167,32 @@ export function ReviewQueue({ backendUrl, onChanged }: { backendUrl: string; onC
         </button>
       </div>
 
-      {total === 0 ? (
-        scope === 'pending' ? (
-          <EmptyState title="You're all caught up">
-            New Appointment Sheets and Protocols land here after each session is captured and turned
-            into a draft note. There's nothing waiting on your review right now.
-          </EmptyState>
-        ) : (
-          <EmptyState title="Nothing approved yet">
-            Sessions you approve move here, so you can look back at them or correct one after the
-            fact.
-          </EmptyState>
-        )
+      {total === 0 && !searching ? (
+        <div className="il-view__empty">
+          {scope === 'pending' ? (
+            <EmptyState variant="review_pending" />
+          ) : (
+            <EmptyState variant="review_approved" />
+          )}
+        </div>
       ) : (
         /* Split pane: the queue stays on screen while a session is open, so
            Nicole keeps her place and can move down the list without losing
            context. Collapses to one column on narrow windows. */
         <div className={`il-split ${selected ? 'il-split--open' : ''}`}>
           <div className="il-split__list">
-            {q.sessions.map((sn) => {
+            {scope === 'approved' && (
+              <SearchBar
+                value={query}
+                onChange={setQuery}
+                placeholder="Search by client name"
+                count={searching ? sessions.length : undefined}
+              />
+            )}
+            {sessions.length === 0 ? (
+              <p className="il-empty">No approved sessions match "{query.trim()}".</p>
+            ) : (
+              sessions.map((sn) => {
               const kind: ReviewKind = sn.sheet_id ? 'sheets' : 'protocols';
               const id = sn.sheet_id ?? sn.protocol_id;
               if (!id) return null;
@@ -196,7 +218,8 @@ export function ReviewQueue({ backendUrl, onChanged }: { backendUrl: string; onC
                   onApprove={() => approve(kind, id, sn.appointment_id)}
                 />
               );
-            })}
+            })
+            )}
           </div>
 
           <div className="il-split__detail">
