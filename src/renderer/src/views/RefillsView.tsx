@@ -177,8 +177,17 @@ export function RefillsView({ backendUrl, onChanged }: { backendUrl: string; onC
               key={r.id}
               title={r.client_name ?? 'Unknown client'}
               meta={r.supplement_name ?? 'supplement'}
-              actions={<Badge tone={TONE[r.tier]}>{daysLabel(r.days_left)}</Badge>}
+              actions={
+                <span style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                  {/* Cancelled from the dashboard: still running low, just no
+                      automated email. Saying so here stops the digest implying
+                      the client is being chased when they aren't. */}
+                  {r.reminders_cancelled_at && <Badge tone="neutral">reminders off</Badge>}
+                  <Badge tone={TONE[r.tier]}>{daysLabel(r.days_left)}</Badge>
+                </span>
+              }
             >
+              {doseBasis(r) && <p className="il-card__note">{doseBasis(r)}</p>}
               <div className="il-refill-actions">
                 <Button
                   variant="primary"
@@ -222,6 +231,20 @@ export function RefillsView({ backendUrl, onChanged }: { backendUrl: string; onC
       )}
     </section>
   );
+}
+
+/**
+ * The dosing the run-out date was computed from — "2 caps daily · about 2 a day
+ * · 30-day supply". Shown because a date with no working behind it is a number
+ * Nicole has to take on faith; with the dose next to it she can spot a wrong
+ * projection (and the reminder timing that follows from it) at a glance.
+ */
+function doseBasis(r: RefillItem): string {
+  const parts: string[] = [];
+  if (r.dose?.trim()) parts.push(r.dose.trim());
+  if (r.per_day && r.per_day > 0) parts.push(`about ${Math.round(r.per_day * 10) / 10} a day`);
+  if (r.days_supply && r.days_supply > 0) parts.push(`${r.days_supply}-day supply`);
+  return parts.join(' · ');
 }
 
 function daysLabel(daysLeft: number | null): string {

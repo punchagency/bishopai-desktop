@@ -14,6 +14,8 @@ import type {
   Overview,
   RefillDigest,
   RefillSendResponse,
+  ReminderKind,
+  UpcomingReminders,
   ReviewContext,
   ReviewKind,
   ReviewQueue,
@@ -314,6 +316,35 @@ export function snoozeRefill(backendUrl: string, id: string, days?: number): Pro
 /** Close a refill out for this cycle. */
 export function skipRefill(backendUrl: string, id: string): Promise<unknown> {
   return json(`${backendUrl}/refills/${id}/skip`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: '{}',
+  });
+}
+
+// --- Scheduled client emails -------------------------------------------------
+
+/** The client emails the cadences will send, soonest first. Read-only. */
+export function fetchUpcomingReminders(
+  backendUrl: string,
+  days?: number,
+  signal?: AbortSignal,
+): Promise<UpcomingReminders> {
+  const q = days ? `?days=${days}` : '';
+  return json<UpcomingReminders>(`${backendUrl}/reminders/upcoming${q}`, { signal });
+}
+
+/**
+ * Stop (or resume) the remaining cadence behind a scheduled email. Silences the
+ * automation only — a cancelled refill still shows as running low in the digest.
+ */
+export function setReminderCancelled(
+  backendUrl: string,
+  kind: ReminderKind,
+  sourceId: string,
+  cancelled: boolean,
+): Promise<{ id: string; kind: ReminderKind; cancelled_at: string | null }> {
+  return json(`${backendUrl}/reminders/${kind}/${sourceId}/${cancelled ? 'cancel' : 'restore'}`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: '{}',

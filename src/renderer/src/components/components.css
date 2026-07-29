@@ -1555,6 +1555,82 @@
   }
 }
 
+/* A returning client's visits fold under one header on the Approved archive, so
+   the list reads as people rather than a column of repeated names. Closed by
+   default; the header is the whole toggle. */
+.il-cgroup {
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+}
+.il-cgroup--active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.il-cgroup__head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.5rem;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  border-radius: var(--radius-md);
+}
+.il-cgroup__head:hover {
+  background: var(--surface-2);
+}
+.il-cgroup__head:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+/* A chevron that rotates from › to ⌄ — the only moving part, so the open/closed
+   state reads at a glance without a second icon. */
+.il-cgroup__chevron {
+  flex: none;
+  width: 0.9rem;
+  text-align: center;
+  color: var(--text-muted);
+  transition: transform 0.15s ease;
+}
+.il-cgroup__chevron--open {
+  transform: rotate(90deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .il-cgroup__chevron {
+    transition: none;
+  }
+}
+.il-cgroup__text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+}
+.il-cgroup__name {
+  font-family: var(--font-heading);
+  font-size: 0.86rem;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.il-cgroup__meta {
+  font-size: 0.7rem;
+  line-height: 1.25;
+  color: var(--text-muted);
+}
+/* The expanded rows sit indented under the header, tied to it by a hairline so a
+   long run of visits still reads as belonging to the client above. */
+.il-cgroup__body {
+  margin: 0.1rem 0 0.3rem 0.95rem;
+  padding-left: 0.4rem;
+  border-left: 1px solid var(--border);
+}
+
 /* ── Review detail (formerly a modal) ─────────────────────────────────────── */
 .il-detail {
   border: 1px solid var(--border);
@@ -2011,3 +2087,119 @@
   margin-top: 0.5rem;
 }
 
+
+/* ---------------------------------------------------------------------------
+   Provenance — the practitioner's own words beside each extracted field.
+   Review used to show ~50 findings with no reference to the transcript at all,
+   so confirming a clinical value meant recalling the session. These styles make
+   the three states legible at a glance: quoted and verified (quiet), quoted but
+   NOT found in the transcript (loud — possibly fabricated), and not quoted at
+   all (a finding the model would not point at).
+   --------------------------------------------------------------------------- */
+.il-prov {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  width: 100%;
+  margin-top: 0.25rem;
+  padding: 0.2rem 0.4rem;
+  border: 0;
+  border-left: 2px solid var(--il-color-border);
+  border-radius: 2px;
+  background: transparent;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--il-color-text-subtle);
+  text-align: left;
+  cursor: pointer;
+}
+.il-prov:hover { background: var(--il-color-surface-sunken, rgba(0, 0, 0, 0.03)); }
+.il-prov__at { flex: none; font-variant-numeric: tabular-nums; opacity: 0.7; }
+.il-prov__quote { font-style: italic; }
+.il-prov--unverified {
+  border-left-color: var(--il-color-danger, #b3261e);
+  color: var(--il-color-danger, #b3261e);
+}
+.il-prov__flag {
+  flex: none;
+  margin-left: auto;
+  font-style: normal;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.65rem;
+  letter-spacing: 0.03em;
+}
+.il-prov--none {
+  border-left-style: dashed;
+  color: var(--il-color-text-subtle);
+  opacity: 0.75;
+  cursor: default;
+  font-style: italic;
+}
+
+/* "heard 'hold' → stop" — a mapping shown, never assumed. */
+.il-mapped {
+  display: block;
+  width: 100%;
+  margin-top: 0.25rem;
+  padding: 0.2rem 0.4rem;
+  border: 0;
+  border-radius: 3px;
+  background: var(--il-color-warning-soft, rgba(180, 120, 20, 0.08));
+  font-size: 0.72rem;
+  color: var(--il-color-text-subtle);
+  text-align: left;
+  cursor: pointer;
+}
+.il-mapped--unresolved {
+  background: var(--il-color-danger-soft, rgba(179, 38, 30, 0.09));
+  color: var(--il-color-danger, #b3261e);
+  font-weight: 500;
+}
+
+/* What the extraction wants Nicole to know before she trusts the draft. */
+.il-extract-banner { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1rem; }
+.il-extract-banner__row {
+  padding: 0.5rem 0.7rem;
+  border-radius: 4px;
+  border-left: 3px solid var(--il-color-border);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+.il-extract-banner__row--warn {
+  background: var(--il-color-warning-soft, rgba(180, 120, 20, 0.08));
+  border-left-color: var(--il-color-warning, #b47814);
+}
+.il-extract-banner__row--danger {
+  background: var(--il-color-danger-soft, rgba(179, 38, 30, 0.09));
+  border-left-color: var(--il-color-danger, #b3261e);
+}
+.il-extract-banner__list { margin: 0.3rem 0 0; padding-left: 1.1rem; }
+
+/* Note on the left, the recording it came from on the right. */
+.il-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 22rem); gap: 1.25rem; align-items: start; }
+.il-split__main { min-width: 0; }
+.il-split__aside { position: sticky; top: 0.5rem; min-width: 0; }
+@media (max-width: 1100px) {
+  .il-split { grid-template-columns: minmax(0, 1fr); }
+  .il-split__aside { position: static; }
+}
+
+.il-transcript {
+  display: flex;
+  flex-direction: column;
+  max-height: 78vh;
+  border: 1px solid var(--il-color-border);
+  border-radius: 6px;
+  background: var(--il-color-surface, #fff);
+  overflow: hidden;
+}
+.il-transcript__bar { padding: 0.5rem; border-bottom: 1px solid var(--il-color-border); }
+.il-transcript__search { width: 100%; font-size: 0.8rem; }
+.il-transcript__body { overflow-y: auto; padding: 0.5rem 0.7rem; }
+.il-transcript__line { margin: 0 0 0.35rem; font-size: 0.78rem; line-height: 1.55; white-space: pre-wrap; }
+.il-transcript__line--hit {
+  background: var(--il-color-accent-soft, rgba(200, 120, 80, 0.16));
+  border-radius: 2px;
+  font-weight: 500;
+}

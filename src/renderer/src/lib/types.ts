@@ -61,6 +61,9 @@ export type ProtocolChangeType = 'add' | 'remove' | 'adjust' | 'continue';
 export type SupplementChange = 'start' | 'stop' | 'increase' | 'decrease' | 'continue';
 
 export interface ProtocolChange {
+  /** The model's own word when `type` wasn't a clean enum value. */
+  type_raw?: string | null;
+  type_unresolved?: boolean;
   description: string;
   type: ProtocolChangeType;
 }
@@ -97,6 +100,18 @@ export interface Supplement {
   /** The ROF's "Function" column — what this supplement is for, in the client's
    *  terms. Practitioner knowledge, so usually written during review. */
   func?: string | null;
+  /** Structured dose, when the transcript stated it plainly. Feeds the WF4
+   *  run-out projection; `dose` stays the verbatim text the documents print. */
+  units_per_dose?: number | null;
+  unit?: string | null;
+  doses_per_day?: number | null;
+  /** The model's own word when `change` wasn't a clean enum value ("hold" →
+   *  stop). Shown as a mapping to confirm rather than presented as fact. */
+  change_raw?: string | null;
+  /** Nothing matched at all — `change` is a placeholder, not a reading. */
+  change_unresolved?: boolean;
+  /** A catalog product this name nearly matched. A suggestion, never applied. */
+  name_matched_to?: string | null;
 }
 export interface FollowUp {
   text: string;
@@ -153,6 +168,33 @@ export interface Lifestyle {
   exercise: string | null;
   diet: string | null;
 }
+/** Where a finding came from: the practitioner's own words, and when. */
+export interface Evidence {
+  /** Dotted field path — "nrt.hta", "concerns.0", "supplements.1". */
+  path: string;
+  quote: string;
+  at_seconds: number | null;
+  /** The quote was NOT found in the transcript. The finding is kept and flagged;
+   *  these are the fields worth reading closely. */
+  unverified?: boolean;
+}
+
+/** Server-computed extraction metadata — never anything the model said. */
+export interface ExtractionMeta {
+  prompt_version?: string;
+  provider?: string;
+  model?: string;
+  /** Stages that failed. Their fields are ABSENT, not empty — the difference
+   *  between "not tested" and "we never read that part of the session". */
+  partial?: string[];
+  /** Field paths where two parts of the transcript disagreed. */
+  conflicts?: { path: string; chosen: string | null; candidates: string[] }[];
+  /** Minutes of the session that produced no usable extraction. */
+  gaps?: { from: number | null; to: number | null }[];
+  attribution_coverage?: number | null;
+  chunks?: number | null;
+}
+
 export interface SessionNote {
   concerns: string[];
   goals?: string[];
@@ -163,6 +205,8 @@ export interface SessionNote {
   follow_ups: (string | FollowUp)[];
   nrt?: NrtFindings;
   lifestyle?: Lifestyle;
+  evidence?: Evidence[];
+  extraction?: ExtractionMeta;
 }
 
 export type ReviewKind = 'sheets' | 'protocols';
@@ -196,6 +240,9 @@ export interface ReviewContext {
     /** What the plan would become if this draft were approved as-is. */
     merged: SupplementPlanRow[];
   };
+  /** The recording this note was extracted from, so every field can be checked
+   *  against what was actually said. */
+  transcript?: { text: string; recorded_at: string | null } | null;
 }
 
 export interface UnmatchedConversation {
@@ -256,6 +303,12 @@ export interface RefillItem {
   supplement_name: string | null;
   dose: string | null;
   qty: number | null;
+  /** Units a day the dose works out to (schedule grid first, then dose text). */
+  per_day?: number | null;
+  /** Days the bottle lasts at that rate — what the run-out date is built from. */
+  days_supply?: number | null;
+  /** Set once Nicole cancels this refill's automated client reminders. */
+  reminders_cancelled_at?: string | null;
   tier: RefillTier;
   /** Persisted Fullscript plan link from the last successful send, if any. */
   fullscript_plan_id?: string | null;
@@ -274,6 +327,27 @@ export interface RefillOrderResult {
   invitation_url: string | null;
   fullscript_plan_id: string | null;
 }
+// Scheduled client emails (server/src/routes/reminders.ts).
+export type ReminderKind = 'refill' | 'reengagement';
+export interface ScheduledReminder {
+  id: string;
+  kind: ReminderKind;
+  /** refills.id / leads.id — what cancel and restore act on. */
+  source_id: string;
+  client_id: string | null;
+  client_name: string;
+  to_email: string | null;
+  subject: string;
+  detail: string | null;
+  /** yyyy-mm-dd. Today means "on the next scheduled pass". */
+  send_at: string;
+  stage: number;
+  blocked_reason: string | null;
+}
+export interface UpcomingReminders {
+  reminders: ScheduledReminder[];
+}
+
 export interface RefillSendResponse {
   batch_id: string;
   sent: number;

@@ -1,4 +1,5 @@
 import type { Lifestyle, NrtFindings, PriorNote, ProtocolChange, SessionNote, Supplement } from '../lib/types';
+import { ExtractionBanner, MappedValueNote, SourceQuote, useEvidence } from '../components/Provenance';
 import { formatDate } from '../lib/format';
 import { Button } from '../components/Button';
 import {
@@ -29,6 +30,7 @@ export function NoteEditor({
   note,
   prior,
   onChange,
+  onSeek,
 }: {
   note: SessionNote;
   /** The client's previous session, shown under each field. Editing a clinical
@@ -36,6 +38,8 @@ export function NoteEditor({
    *  session elsewhere; the comparison belongs where the typing happens. */
   prior?: PriorNote | null;
   onChange: (n: SessionNote) => void;
+  /** Jump the transcript pane to the words behind a field. */
+  onSeek?: (seconds: number | null, quote: string) => void;
 }) {
   const concerns = note?.concerns || [];
   const assessments = note?.assessments || [];
@@ -70,6 +74,12 @@ export function NoteEditor({
 
   const p = prior?.note;
   const priorDate = prior ? formatDate(prior.date) : '';
+  // Provenance: the practitioner's own words behind each extracted field, so a
+  // review is a confirmation against the source rather than a recall test.
+  const evidence = useEvidence(note);
+  const src = (path: string, hasValue = true) => (
+    <SourceQuote path={path} evidence={evidence} onSeek={onSeek} hasValue={hasValue} />
+  );
 
   const set = (patch: Partial<SessionNote>) =>
     onChange({
@@ -85,6 +95,8 @@ export function NoteEditor({
 
   return (
     <div className="il-form">
+      <ExtractionBanner meta={note?.extraction} evidence={evidence} />
+
       <Field label="Concerns">
         <textarea
           className="il-input il-input--area"
@@ -92,6 +104,9 @@ export function NoteEditor({
           onChange={(e) => set({ concerns: lines(e.target.value) })}
           placeholder="One concern per line"
         />
+        {concerns.map((_, i) => (
+          <div key={i}>{src(`concerns.${i}`)}</div>
+        ))}
         <Prior value={p?.concerns.join('\n')} date={priorDate} />
       </Field>
 
@@ -102,6 +117,9 @@ export function NoteEditor({
           onChange={(e) => set({ assessments: lines(e.target.value) })}
           placeholder="One assessment per line"
         />
+        {assessments.map((_, i) => (
+          <div key={i}>{src(`assessments.${i}`)}</div>
+        ))}
         <Prior value={p?.assessments.join('\n')} date={priorDate} />
       </Field>
 
@@ -116,6 +134,7 @@ export function NoteEditor({
                 placeholder={NOT_STATED}
                 onChange={(e) => set({ nrt: { ...nrt, [f.key]: e.target.value || null } })}
               />
+              {src(`nrt.${f.key}`, nrt[f.key] != null)}
               <Prior value={p?.nrt?.[f.key]} date={priorDate} />
             </label>
           ))}
@@ -138,6 +157,7 @@ export function NoteEditor({
                   set({ nrt: { ...nrt, foundation: { ...foundation, [f.key]: e.target.value || null } } })
                 }
               />
+              {src(`nrt.foundation.${f.key}`, foundation[f.key] != null)}
               <Prior value={p?.nrt?.foundation?.[f.key]} date={priorDate} />
             </label>
           ))}
@@ -157,6 +177,7 @@ export function NoteEditor({
                   set({ nrt: { ...nrt, body_scan: { ...bodyScan, [f.key]: e.target.value || null } } })
                 }
               />
+              {src(`nrt.body_scan.${f.key}`, bodyScan[f.key] != null)}
               <Prior value={p?.nrt?.body_scan?.[f.key]} date={priorDate} />
             </label>
           ))}
@@ -174,6 +195,7 @@ export function NoteEditor({
                 placeholder={NOT_MENTIONED}
                 onChange={(e) => set({ lifestyle: { ...lifestyle, [f.key]: e.target.value || null } })}
               />
+              {src(`lifestyle.${f.key}`, lifestyle[f.key] != null)}
               <Prior value={p?.lifestyle?.[f.key]} date={priorDate} />
             </label>
           ))}
@@ -183,6 +205,7 @@ export function NoteEditor({
       <Field label="Protocol changes">
         {protocol_changes.map((c, i) => (
           <div className="il-row" key={i}>
+            <MappedValueNote raw={c.type_raw} unresolved={c.type_unresolved} mapped={c.type} />
             <select
               className="il-input il-input--select"
               value={c.type}
@@ -269,6 +292,20 @@ export function NoteEditor({
             <button className="il-toggle" onClick={() => set({ supplements: removeAt(supplements, i) })}>
               ✕
             </button>
+            {/* A supplement's action decides whether it joins or LEAVES the
+                client's plan, so when the model didn't say it cleanly, the
+                mapping is shown rather than presented as fact. */}
+            <MappedValueNote raw={s.change_raw} unresolved={s.change_unresolved} mapped={s.change} />
+            {s.name_matched_to && s.name_matched_to !== s.name && (
+              <button
+                type="button"
+                className="il-mapped"
+                onClick={() => set({ supplements: patchAt(supplements, i, { name: s.name_matched_to as string, name_matched_to: null }) })}
+              >
+                did you mean <strong>{s.name_matched_to}</strong>? — click to use it
+              </button>
+            )}
+            {src(`supplements.${i}`)}
           </div>
         ))}
         <Button

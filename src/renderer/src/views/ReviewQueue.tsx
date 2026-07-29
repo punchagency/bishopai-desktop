@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Card } from '../components/Card';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
@@ -8,7 +8,7 @@ import { SkeletonView } from '../components/Skeleton';
 import { EmptyState } from '../components/EmptyState';
 import { InfoPopover } from '../components/InfoPopover';
 import { SearchBar } from '../components/SearchBar';
-import type { ReviewKind, ReviewQueue as Queue } from '../lib/types';
+import type { ReviewKind, ReviewQueue as Queue, ReviewSession } from '../lib/types';
 import { ReviewDetail } from './ReviewDetail';
 
 // Sample data so the dashboard renders standalone when the backend isn't up
@@ -53,6 +53,17 @@ export function ReviewQueue({ backendUrl, onChanged }: { backendUrl: string; onC
   // Search only earns its place on the Approved archive — the growing list where
   // finding one client's past visit means scrolling. Pending is a daily handful.
   const [query, setQuery] = useState('');
+  // Which client groups are expanded in the Approved list. A returning client has
+  // one row per visit; grouping collapses those under the client's name so the
+  // archive reads as a list of people, not a wall of repeated names. Keyed by
+  // client id (name as the fallback for a session with no client attached).
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const toggleGroup = (key: string) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
 
   const load = useCallback(
     (signal?: AbortSignal) => {
@@ -126,6 +137,40 @@ export function ReviewQueue({ backendUrl, onChanged }: { backendUrl: string; onC
   const sessions = q.sessions;
   const total = sessions.length;
   const searching = scope === 'approved' && query.trim().length > 0;
+  // Group by client only on the Approved archive, and not while searching — a
+  // name search should show its matches flat, not re-buried under a group header.
+  // Pending is a daily handful where one row per visit is exactly what's wanted.
+  const grouped = scope === 'approved' && !searching;
+
+  // One queue row. Pulled out so it can render both flat (pending / search) and
+  // inside a client group (approved), without duplicating the kind/id plumbing.
+  const renderRow = (sn: (typeof sessions)[number]) => {
+    const kind: ReviewKind = sn.sheet_id ? 'sheets' : 'protocols';
+    const id = sn.sheet_id ?? sn.protocol_id;
+    if (!id) return null;
+    return (
+      <QueueRow
+        key={sn.appointment_id}
+        name={sn.client_name ?? 'Unknown client'}
+        kind="Session"
+        date={formatDate(sn.starts_at ?? sn.updated_at)}
+        status={sn.status}
+        active={selected?.appointmentId === sn.appointment_id}
+        approving={pending === sn.appointment_id}
+        canApprove={scope === 'pending'}
+        onOpen={() =>
+          setSelected({
+            kind,
+            id,
+            appointmentId: sn.appointment_id,
+            clientName: sn.client_name ?? 'Unknown client',
+            clientId: sn.client_id,
+          })
+        }
+        onApprove={() => approve(kind, id, sn.appointment_id)}
+      />
+    );
+  };
 
   return (
     <section className="il-view">
@@ -191,34 +236,28 @@ export function ReviewQueue({ backendUrl, onChanged }: { backendUrl: string; onC
             )}
             {sessions.length === 0 ? (
               <p className="il-empty">No approved sessions match "{query.trim()}".</p>
+            ) : grouped ? (
+              groupSessions(sessions).map((g) =>
+                // A client seen once is just a row — no point collapsing a group of
+                // one. Two or more visits fold under a header showing the count.
+                g.sessions.length === 1 ? (
+                  renderRow(g.sessions[0])
+                ) : (
+                  <ClientGroup
+                    key={g.key}
+                    name={g.name}
+                    count={g.sessions.length}
+                    latest={formatDate(g.sessions[0].starts_at ?? g.sessions[0].updated_at)}
+                    open={expanded.has(g.key)}
+                    hasActive={g.sessions.some((s) => s.appointment_id === selected?.appointmentId)}
+                    onToggle={() => toggleGroup(g.key)}
+                  >
+                    {g.sessions.map(renderRow)}
+                  </ClientGroup>
+                ),
+              )
             ) : (
-              sessions.map((sn) => {
-              const kind: ReviewKind = sn.sheet_id ? 'sheets' : 'protocols';
-              const id = sn.sheet_id ?? sn.protocol_id;
-              if (!id) return null;
-              return (
-                <QueueRow
-                  key={sn.appointment_id}
-                  name={sn.client_name ?? 'Unknown client'}
-                  kind="Session"
-                  date={formatDate(sn.starts_at ?? sn.updated_at)}
-                  status={sn.status}
-                  active={selected?.appointmentId === sn.appointment_id}
-                  approving={pending === sn.appointment_id}
-                  canApprove={scope === 'pending'}
-                  onOpen={() =>
-                    setSelected({
-                      kind,
-                      id,
-                      appointmentId: sn.appointment_id,
-                      clientName: sn.client_name ?? 'Unknown client',
-                      clientId: sn.client_id,
-                    })
-                  }
-                  onApprove={() => approve(kind, id, sn.appointment_id)}
-                />
-              );
-            })
+              sessions.map(renderRow)
             )}
           </div>
 
@@ -246,6 +285,72 @@ export function ReviewQueue({ backendUrl, onChanged }: { backendUrl: string; onC
         </div>
       )}
     </section>
+  );
+}
+
+interface ClientGrouping {
+  key: string;
+  name: string;
+  sessions: ReviewSession[];
+}
+
+/**
+ * Fold the flat session list into one entry per client, preserving order. The
+ * server returns sessions newest-first, so first-seen order gives groups in
+ * recency order and each group's sessions stay newest-first inside it. Keyed by
+ * client id, falling back to the name so sessions with no client attached don't
+ * all collapse into a single "unknown" pile.
+ */
+function groupSessions(sessions: ReviewSession[]): ClientGrouping[] {
+  const groups = new Map<string, ClientGrouping>();
+  for (const sn of sessions) {
+    const key = sn.client_id ?? `name:${sn.client_name ?? 'unknown'}`;
+    const existing = groups.get(key);
+    if (existing) {
+      existing.sessions.push(sn);
+    } else {
+      groups.set(key, { key, name: sn.client_name ?? 'Unknown client', sessions: [sn] });
+    }
+  }
+  return [...groups.values()];
+}
+
+/**
+ * A collapsible header standing in for a returning client's run of visits. Closed
+ * by default (the archive is for looking back, not daily work), it shows the
+ * client's name, how many visits, and the most recent date; expanding reveals the
+ * individual session rows. Stays open-looking when it holds the row being viewed,
+ * so the detail pane never points at a session hidden inside a collapsed group.
+ */
+function ClientGroup({
+  name, count, latest, open, hasActive, onToggle, children,
+}: {
+  name: string;
+  count: number;
+  latest: string;
+  open: boolean;
+  /** True when one of this group's sessions is the one open in the detail pane. */
+  hasActive: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  const show = open || hasActive;
+  return (
+    <div className={`il-cgroup ${show ? 'il-cgroup--open' : ''} ${hasActive ? 'il-cgroup--active' : ''}`}>
+      <button className="il-cgroup__head" onClick={onToggle} aria-expanded={show}>
+        <span className={`il-cgroup__chevron ${show ? 'il-cgroup__chevron--open' : ''}`} aria-hidden>
+          ›
+        </span>
+        <span className="il-cgroup__text">
+          <span className="il-cgroup__name" title={name}>{name}</span>
+          <span className="il-cgroup__meta">
+            {count} visits
+            {latest && ` · latest ${latest}`}
+          </span>
+        </span>
+      </button>
+      {show && <div className="il-cgroup__body">{children}</div>}
+    </div>
   );
 }
 

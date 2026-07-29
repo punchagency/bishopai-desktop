@@ -18,6 +18,7 @@ import {
 import { formatDate } from '../lib/format';
 import type { PriorNote, ReviewContext, ReviewKind, SessionNote } from '../lib/types';
 import { NoteEditor } from './NoteEditor';
+import { TranscriptPane } from '../components/Provenance';
 import { FlowSheetPanel } from './FlowSheetPanel';
 import { SupplementProtocolPanel } from './SupplementProtocolPanel';
 import { SessionHistoryPanel } from './SessionHistoryPanel';
@@ -38,6 +39,8 @@ type Tab = 'preview' | 'edit' | 'flowsheet' | 'history' | 'supplement';
 export function ReviewDetail({ backendUrl, kind, id, clientName, onClose, onChanged }: Props) {
   const [tab, setTab] = useState<Tab>('preview');
   const [note, setNote] = useState<SessionNote | null>(null);
+  // The quote whose moment the transcript pane is scrolled to.
+  const [quote, setQuote] = useState<string | null>(null);
   const [markdown, setMarkdown] = useState<string>('');
   const [context, setContext] = useState<ReviewContext | null>(null);
   const [busy, setBusy] = useState(false);
@@ -315,11 +318,24 @@ export function ReviewDetail({ backendUrl, kind, id, clientName, onClose, onChan
       {tab === 'edit' &&
         (note
           ? (
-            <NoteEditor
-              note={note}
-              prior={context?.prior.sheet ?? context?.prior.protocol ?? null}
-              onChange={setNote}
-            />
+            <div className={context?.transcript ? 'il-split' : undefined}>
+              <div className="il-split__main">
+                <NoteEditor
+                  note={note}
+                  prior={context?.prior.sheet ?? context?.prior.protocol ?? null}
+                  onChange={setNote}
+                  onSeek={(_, quote) => setQuote(quote)}
+                />
+              </div>
+              {/* The source, beside the fields extracted from it. Confirming a
+                  clinical finding against the practitioner's own words is a
+                  glance; recalling the session from memory is not. */}
+              {context?.transcript && (
+                <aside className="il-split__aside">
+                  <TranscriptPane text={context.transcript.text} highlight={quote} />
+                </aside>
+              )}
+            </div>
           )
           : <Pending failed={loadFailed} />)}
 

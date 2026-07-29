@@ -221,13 +221,19 @@ h3 {
 .il-cols > * {
   min-width: 0;
 }
+/* Equal halves, for a row of two peer cards rather than a main/aside split. */
+.il-cols--split {
+  grid-template-columns: 1fr 1fr;
+  margin-top: 1rem;
+}
 .il-cols__stack {
   display: flex;
   flex-direction: column;
   gap: 1rem;
 }
 @media (max-width: 860px) {
-  .il-cols {
+  .il-cols,
+  .il-cols--split {
     grid-template-columns: 1fr;
   }
 }
@@ -259,6 +265,52 @@ h3 {
   font-size: 0.77rem;
   color: var(--text-muted);
   white-space: nowrap;
+}
+
+/* Scheduled client emails (Overview → Email reminders) */
+.il-reminders {
+  list-style: none;
+  margin: 0.7rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.il-reminder {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--border);
+}
+.il-reminder:first-child {
+  border-top: none;
+}
+.il-reminder .il-dot {
+  margin-top: 0.35rem;
+}
+.il-reminder__body {
+  flex: 1;
+  min-width: 0;
+}
+.il-reminder__who {
+  font-size: 0.9rem;
+  color: var(--text);
+}
+/* The subject line, one line only — the full text is in the row's tooltip. */
+.il-reminder__what {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.il-reminder__when {
+  font-size: 0.77rem;
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+}
+.il-reminder__blocked {
+  color: var(--warning);
 }
 
 /* Status notice (placeholder views) */

@@ -3,8 +3,15 @@ import { StatCard } from '../components/StatCard';
 import { Feed, type FeedRow } from '../components/Feed';
 import { Badge } from '../components/Badge';
 import { Skeleton } from '../components/Skeleton';
-import { fetchOverview, fetchTasks, updateTask } from '../lib/api';
-import type { CourierStatus, Overview as OverviewData, Task, TaskStatus, ViewKey } from '../lib/types';
+import { fetchOverview, fetchTasks, fetchUpcomingReminders, setReminderCancelled, updateTask } from '../lib/api';
+import type {
+  CourierStatus,
+  Overview as OverviewData,
+  ScheduledReminder,
+  Task,
+  TaskStatus,
+  ViewKey,
+} from '../lib/types';
 
 const SAMPLE: OverviewData = {
   stats: { awaiting_review: 2, unmatched: 2, upcoming: 3, approved_today: 1 },
@@ -87,14 +94,24 @@ export function Overview({ backendUrl, courier, onNavigate }: Props) {
         <StatCard label="Approved today" value={n(d.stats.approved_today)} tone="success" />
       </div>
 
-      <div className="il-cols">
+      {/* What's coming, on its own full-width row and above the working columns:
+          the sessions Nicole will sit in, beside the emails that will go out
+          before them. Side by side rather than stacked in the narrow column — a
+          reminder row carries a client, a subject, a date and a Cancel button,
+          and none of that survives 330px. Both are time-sensitive, so neither
+          sits below a scrolling activity log. */}
+      <div className="il-cols il-cols--split">
+        <Feed title="Upcoming" rows={upcomingRows} empty="No upcoming sessions." />
+        <EmailRemindersCard backendUrl={backendUrl} />
+      </div>
+
+      <div className="il-cols" style={{ marginTop: '1rem' }}>
         <div className="il-cols__stack">
           <TasksCard backendUrl={backendUrl} />
           <Feed title="Recent activity" rows={activityRows} empty="No activity yet." />
         </div>
         <div className="il-cols__stack">
           <Feed title="Notifications" rows={notes} />
-          <Feed title="Upcoming" rows={upcomingRows} empty="No upcoming sessions." />
         </div>
       </div>
     </section>
@@ -190,6 +207,151 @@ function TasksCard({ backendUrl }: { backendUrl: string }) {
       )}
     </div>
   );
+}
+
+/**
+ * The client emails the cadences are about to send — refill reminders and WF3
+ * re-engagement steps — each with the date it goes out and a way to stop it.
+ *
+ * This is the only place Nicole can see automation before it reaches a client.
+ * Cancelling silences that cadence and nothing else: a cancelled refill still
+ * shows as running low under Refills, so stopping the email never hides the
+ * clinical fact behind it. A cancelled row stays put with an Undo until the
+ * next load, because an accidental cancel is otherwise unrecoverable from here.
+ */
+const VISIBLE_REMINDERS = 8;
+const RESERVED_REFILL_ROWS = 4;
+
+/**
+ * Which reminders make the card. Soonest first is the server's order, but a
+ * straight slice hides the wrong ones: a re-engagement cadence can queue thirty
+ * nudges onto a single day and bury every refill behind them. Refills keep a
+ * few reserved rows — a client about to run out of a prescribed supplement is
+ * the row Nicole most needs to see before it sends. Unused slots go back to the
+ * rest, and the shown set stays in date order.
+ */
+function pickVisible(all: ScheduledReminder[]): ScheduledReminder[] {
+  const refills = all.filter((r) => r.kind === 'refill');
+  const rest = all.filter((r) => r.kind !== 'refill');
+  const refillRows = Math.min(refills.length, Math.max(RESERVED_REFILL_ROWS, VISIBLE_REMINDERS - rest.length));
+  return [...refills.slice(0, refillRows), ...rest.slice(0, VISIBLE_REMINDERS - refillRows)].sort((a, b) =>
+    a.send_at.localeCompare(b.send_at),
+  );
+}
+
+function EmailRemindersCard({ backendUrl }: { backendUrl: string }) {
+  const [reminders, setReminders] = useState<ScheduledReminder[] | null>(null);
+  const [cancelled, setCancelled] = useState<Record<string, boolean>>({});
+  const [busy, setBusy] = useState<string | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
+
+  useEffect(() => {
+    const ctrl = new AbortController();
+    fetchUpcomingReminders(backendUrl, 30, ctrl.signal)
+      .then((r) => setReminders(r.reminders))
+      .catch(() => setReminders([]));
+    return () => ctrl.abort();
+  }, [backendUrl]);
+
+  const toggle = async (r: ScheduledReminder, cancel: boolean) => {
+    setBusy(r.id);
+    setFailed(null);
+    try {
+      await setReminderCancelled(backendUrl, r.kind, r.source_id, cancel);
+      setCancelled((cur) => ({ ...cur, [r.id]: cancel }));
+    } catch {
+      setFailed(r.id); // nothing changed server-side; the row keeps its old state
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  // The badge counts what will actually reach a client — cancelled rows and
+  // ones with nowhere to send don't.
+  const willSend = (reminders ?? []).filter((r) => !r.blocked_reason && !cancelled[r.id]).length;
+  const shown = pickVisible(reminders ?? []);
+  const hidden = (reminders?.length ?? 0) - shown.length;
+
+  return (
+    <div className="il-card">
+      <h3 className="il-card__title">
+        Email reminders
+        {willSend > 0 && <Badge tone="neutral"> {willSend} scheduled</Badge>}
+      </h3>
+      <p className="il-card__meta" style={{ marginTop: '0.35rem' }}>
+        Automatic emails to clients. Cancelling stops the reminder, not the refill.
+      </p>
+
+      {reminders === null && (
+        <div style={{ display: 'grid', gap: '0.6rem', marginTop: '0.7rem' }}>
+          {[80, 60, 70].map((w, i) => (
+            <Skeleton key={i} width={`${w}%`} height="1rem" />
+          ))}
+        </div>
+      )}
+
+      {reminders?.length === 0 && (
+        <p className="il-card__meta" style={{ marginTop: '0.6rem' }}>
+          Nothing queued to send in the next 30 days.
+        </p>
+      )}
+
+      {reminders && reminders.length > 0 && (
+        <ul className="il-reminders">
+          {shown.map((r) => {
+            const isCancelled = cancelled[r.id] === true;
+            const blocked = !!r.blocked_reason;
+            return (
+              <li key={r.id} className="il-reminder" style={{ opacity: busy === r.id || isCancelled ? 0.55 : 1 }}>
+                <span className={`il-dot il-dot--${blocked ? 'connecting' : isCancelled ? 'disconnected' : 'connected'}`} />
+                <div className="il-reminder__body">
+                  <div className="il-reminder__who">{r.client_name}</div>
+                  {/* What it's about — for a refill that's the supplement and the
+                      dose the timing was computed from. The subject line the
+                      client will read is one hover away. */}
+                  <div className="il-reminder__what" title={`Subject: ${r.subject}`}>
+                    {r.detail ?? r.subject}
+                  </div>
+                  <div className="il-reminder__when">
+                    {isCancelled ? 'Cancelled — no email will be sent' : sendWhen(r.send_at)}
+                    {blocked && <span className="il-reminder__blocked"> · won’t send: {r.blocked_reason}</span>}
+                    {failed === r.id && <span className="il-error"> · couldn’t update, try again</span>}
+                  </div>
+                </div>
+                <button
+                  className="il-btn il-btn--ghost"
+                  disabled={busy === r.id}
+                  title={isCancelled ? 'Resume this cadence' : `Don’t send this — “${r.subject}”`}
+                  onClick={() => void toggle(r, !isCancelled)}
+                >
+                  {isCancelled ? 'Undo' : 'Cancel'}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {hidden > 0 && (
+        <p className="il-card__meta" style={{ marginTop: '0.5rem' }}>
+          + {hidden} more scheduled in the next 30 days.
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** "sends today" / "sends tomorrow" / "sends Tue 4 Aug · in 6 days". */
+function sendWhen(sendAt: string): string {
+  const d = new Date(`${sendAt}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return '';
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const days = Math.round((d.getTime() - today.getTime()) / 86_400_000);
+  if (days <= 0) return 'sends today';
+  if (days === 1) return 'sends tomorrow';
+  const date = d.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' });
+  return `sends ${date} · in ${days}d`;
 }
 
 function timeAgo(ts: string): string {
