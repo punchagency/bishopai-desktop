@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { TopBar } from './components/TopBar';
 import { Sidebar } from './components/Sidebar';
-import { Button } from './components/Button';
 import { Overview } from './views/Overview';
 import { ReviewQueue } from './views/ReviewQueue';
 import { UnmatchedView } from './views/UnmatchedView';
@@ -12,22 +11,16 @@ import { ScheduleView } from './views/ScheduleView';
 import { ActivityView } from './views/ActivityView';
 import { SettingsView } from './views/SettingsView';
 import { Login } from './views/Login';
-import { fetchAuthStatus, fetchOverview, setAuthToken, setUnauthorizedHandler } from './lib/api';
-import type { AuthStatus, CourierStatus, ViewKey } from './lib/types';
+import { fetchAuthStatus, fetchOverview, fetchPocketStatus, setAuthToken, setUnauthorizedHandler } from './lib/api';
+import type { AuthStatus, PocketStatus, ViewKey } from './lib/types';
 import { Onboarding } from './views/Onboarding';
 
 const DEFAULT_BACKEND = 'http://localhost:3000';
 const TOKEN_KEY = 'innerlume.token';
-const DISCONNECTED: CourierStatus = {
-  state: 'disconnected',
-  phase: 'setup',
-  lastSyncedAt: null,
-  message: 'Bee not connected — click Connect Bee to start.',
-};
 
 export function App() {
   const [backendUrl, setBackendUrl] = useState(DEFAULT_BACKEND);
-  const [courier, setCourier] = useState<CourierStatus>(DISCONNECTED);
+  const [pocket, setPocket] = useState<PocketStatus | null>(null);
   const [view, setView] = useState<ViewKey>('overview');
   const [navCollapsed, setNavCollapsed] = useState(
     () => localStorage.getItem('innerlume.nav') === 'collapsed',
@@ -54,13 +47,9 @@ export function App() {
     else localStorage.removeItem(TOKEN_KEY);
   }, []);
 
-  // Pull app info + initial status, then subscribe to live courier updates.
+  // Pull app info (which backend to talk to).
   useEffect(() => {
-    const bridge = window.innerlume;
-    if (!bridge) return;
-    bridge.getAppInfo().then((i) => setBackendUrl(i.backendUrl)).catch(() => {});
-    bridge.bee.getStatus().then(setCourier).catch(() => {});
-    return bridge.bee.onStatus(setCourier);
+    window.innerlume?.getAppInfo().then((i) => setBackendUrl(i.backendUrl)).catch(() => {});
   }, []);
 
   // Seed the api token from storage, and when any guarded call 401s (login was
@@ -100,16 +89,26 @@ export function App() {
       });
   }, [backendUrl]);
 
+  // Recording health comes from the backend now, not a local courier — the
+  // ingest path doesn't pass through this machine at all. Polled on the same
+  // cadence as the counts; a failure leaves it null, which the UI reads as
+  // "checking" rather than inventing a problem.
+  const refreshPocket = useCallback(() => {
+    fetchPocketStatus(backendUrl)
+      .then(setPocket)
+      .catch(() => setPocket(null));
+  }, [backendUrl]);
+
   // Refresh on view change + poll live every 20s (so counts track background work).
   useEffect(() => {
     refreshCounts();
-    const t = setInterval(refreshCounts, 20_000);
+    refreshPocket();
+    const t = setInterval(() => {
+      refreshCounts();
+      refreshPocket();
+    }, 20_000);
     return () => clearInterval(t);
-  }, [refreshCounts, view]);
-
-  const connectBee = () => {
-    window.innerlume?.bee.connect().then(setCourier).catch(() => {});
-  };
+  }, [refreshCounts, refreshPocket, view]);
 
   // Gate the whole app behind login when Nicole has it turned on.
   const needsLogin = authStatus?.enabled && !token;
@@ -119,29 +118,8 @@ export function App() {
 
   return (
     <div className="il-app">
-      {showOnboarding && (
-        <Onboarding
-          courierState={courier.state}
-          onConnectBee={connectBee}
-          onDismiss={dismissOnboarding}
-        />
-      )}
-      <TopBar
-        courierState={courier.state}
-        courierPhase={courier.phase}
-        courierMessage={courier.message}
-        backendOnline={backendOnline}
-        onConnectBee={connectBee}
-      />
-
-      {courier.state === 'connecting' && courier.authUrl && (
-        <div className="il-banner">
-          <span>Approve Bee access in your browser to start syncing conversations.</span>
-          <Button variant="primary" onClick={() => window.innerlume?.openExternal(courier.authUrl!)}>
-            Open approval link
-          </Button>
-        </div>
-      )}
+      {showOnboarding && <Onboarding pocket={pocket} onDismiss={dismissOnboarding} />}
+      <TopBar pocket={pocket} backendOnline={backendOnline} />
 
       <div className="il-body">
         <Sidebar
@@ -152,7 +130,7 @@ export function App() {
           onToggle={() => setNavCollapsed((c) => !c)}
         />
         <main className="il-main">
-          {view === 'overview' && <Overview backendUrl={backendUrl} courier={courier} onNavigate={setView} />}
+          {view === 'overview' && <Overview backendUrl={backendUrl} pocket={pocket} onNavigate={setView} />}
           {view === 'review' && <ReviewQueue backendUrl={backendUrl} onChanged={refreshCounts} />}
           {view === 'unmatched' && <UnmatchedView backendUrl={backendUrl} onChanged={refreshCounts} />}
           {view === 'checkout' && <CheckoutView backendUrl={backendUrl} onChanged={refreshCounts} />}

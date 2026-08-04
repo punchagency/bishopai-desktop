@@ -1,12 +1,18 @@
-export type CourierState = 'connected' | 'connecting' | 'disconnected' | 'error';
-export type BeePhase = 'setup' | 'approving' | 'active' | 'attention';
-
-export interface CourierStatus {
-  state: CourierState;
-  phase: BeePhase; // coarse onboarding phase for the UI
-  lastSyncedAt: string | null;
-  message: string;
-  authUrl?: string; // present while awaiting owner approval of Bee access
+/**
+ * GET /pocket/status — is the recorder feeding us?
+ *
+ * Recordings reach the backend directly from Pocket, so this is a report about
+ * something happening elsewhere, not a local connection this app controls.
+ * `healthy` is about ingest (something landed recently), not credentials.
+ */
+export interface PocketStatus {
+  configured: boolean;
+  webhookVerified: boolean;
+  pollEnabled: boolean;
+  lastRecordingAt: string | null;
+  recordingsLast24h: number;
+  unmatched: number;
+  healthy: boolean;
 }
 
 // Mirrors the backend GET /review/queue row shapes (server/src/routes/review.ts).
@@ -247,7 +253,8 @@ export interface ReviewContext {
 
 export interface UnmatchedConversation {
   id: string;
-  bee_id: string;
+  source_id: string;
+  source?: string;
   starts_at: string;
   ends_at: string;
   correlation_status: string | null;
@@ -257,13 +264,15 @@ export interface UnmatchedConversation {
 /** GET /review/unmatched/:id — one recording in full, for the detail pane. */
 export interface UnmatchedDetail {
   id: string;
-  bee_id: string;
+  source_id: string;
+  source?: string;
   starts_at: string;
   ends_at: string;
   correlation_status: string | null;
   extraction_status: string | null;
-  /** The whole recording, not the 240-char list preview. May be null (Bee sent
-   *  a session with no usable transcript — nothing to read, only timing to go on). */
+  /** The whole recording, not the 240-char list preview. May be null (the
+   *  recorder sent a session with no usable transcript — nothing to read, only
+   *  timing to go on). */
   transcript: string | null;
 }
 
@@ -562,11 +571,6 @@ export interface Overview {
 export interface InnerlumeBridge {
   getAppInfo: () => Promise<{ backendUrl: string; version: string }>;
   openExternal: (url: string) => void;
-  bee: {
-    getStatus: () => Promise<CourierStatus>;
-    connect: () => Promise<CourierStatus>;
-    onStatus: (cb: (s: CourierStatus) => void) => () => void; // returns unsubscribe
-  };
 }
 
 declare global {

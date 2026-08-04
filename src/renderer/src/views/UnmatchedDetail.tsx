@@ -74,9 +74,9 @@ export function UnmatchedDetail({ backendUrl, conversation, onClose, onMatched }
               minute: '2-digit',
             })}
           </h2>
-          <span className="il-detail__kind">Bee recording</span>
+          <span className="il-detail__kind">Recording</span>
           <InfoPopover label="Why is this here?" title="Unmatched recordings">
-            Bee captured this conversation but we couldn't tie it to an appointment with
+            Pocket captured this session but we couldn't tie it to an appointment with
             confidence — no booking overlapped its time, or more than one did. We never
             auto-guess the client. Read it through, then assign it to the right appointment
             (or straight to a client if it was a walk-in). Assigning kicks off the same
@@ -97,8 +97,8 @@ export function UnmatchedDetail({ backendUrl, conversation, onClose, onMatched }
             <dd>{dur ?? 'unknown'}</dd>
           </div>
           <div className="il-meta__row">
-            <dt>Bee ID</dt>
-            <dd className="il-meta__mono">{conversation.bee_id}</dd>
+            <dt>Recording ID</dt>
+            <dd className="il-meta__mono">{conversation.source_id}</dd>
           </div>
           {detail?.extraction_status && (
             <div className="il-meta__row">

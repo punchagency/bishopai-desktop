@@ -1693,7 +1693,7 @@
 }
 
 /* ── Unmatched recording detail ───────────────────────────────────────────── */
-/* Recording facts (time, length, Bee id) as a compact definition list above the
+/* Recording facts (time, length, recording id) as a compact definition list above the
    transcript — a label column narrow enough that the values line up to read down. */
 .il-meta {
   margin: 0 0 1.2rem;
@@ -2176,13 +2176,18 @@
 }
 .il-extract-banner__list { margin: 0.3rem 0 0; padding-left: 1.1rem; }
 
-/* Note on the left, the recording it came from on the right. */
-.il-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 22rem); gap: 1.25rem; align-items: start; }
-.il-split__main { min-width: 0; }
-.il-split__aside { position: sticky; top: 0.5rem; min-width: 0; }
+/* Note on the left, the recording it came from on the right.
+   Deliberately NOT called .il-split: this lives inside .il-split__detail, so it
+   is an .il-split nested in an .il-split. Sharing the name meant this rule —
+   later in the file, same specificity — silently won on the review queue and
+   the unmatched view too, handing the list 1fr and squeezing the open session
+   into 22rem. Its own block name keeps the two layouts independent. */
+.il-notepane { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 22rem); gap: 1.25rem; align-items: start; }
+.il-notepane__main { min-width: 0; }
+.il-notepane__aside { position: sticky; top: 0.5rem; min-width: 0; }
 @media (max-width: 1100px) {
-  .il-split { grid-template-columns: minmax(0, 1fr); }
-  .il-split__aside { position: static; }
+  .il-notepane { grid-template-columns: minmax(0, 1fr); }
+  .il-notepane__aside { position: static; }
 }
 
 .il-transcript {

@@ -318,8 +318,8 @@ export function ReviewDetail({ backendUrl, kind, id, clientName, onClose, onChan
       {tab === 'edit' &&
         (note
           ? (
-            <div className={context?.transcript ? 'il-split' : undefined}>
-              <div className="il-split__main">
+            <div className={context?.transcript ? 'il-notepane' : undefined}>
+              <div className="il-notepane__main">
                 <NoteEditor
                   note={note}
                   prior={context?.prior.sheet ?? context?.prior.protocol ?? null}
@@ -331,7 +331,7 @@ export function ReviewDetail({ backendUrl, kind, id, clientName, onClose, onChan
                   clinical finding against the practitioner's own words is a
                   glance; recalling the session from memory is not. */}
               {context?.transcript && (
-                <aside className="il-split__aside">
+                <aside className="il-notepane__aside">
                   <TranscriptPane text={context.transcript.text} highlight={quote} />
                 </aside>
               )}

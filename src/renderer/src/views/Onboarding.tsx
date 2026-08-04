@@ -1,6 +1,6 @@
 import { Button } from '../components/Button';
 import { StatusDot } from '../components/StatusDot';
-import type { CourierState } from '../lib/types';
+import type { PocketStatus } from '../lib/types';
 
 interface Step {
   id: string;
@@ -13,22 +13,25 @@ interface Step {
 }
 
 interface Props {
-  courierState: CourierState;
-  onConnectBee: () => void;
+  pocket: PocketStatus | null;
   onDismiss: () => void;
 }
 
-export function Onboarding({ courierState, onConnectBee, onDismiss }: Props) {
-  const beeConnected = courierState === 'connected';
+export function Onboarding({ pocket, onDismiss }: Props) {
+  // Nothing for Nicole to click: Pocket sends recordings to the server, so this
+  // step is a report on setup done elsewhere, not an action she takes here.
+  const pocketReady = !!pocket?.healthy;
 
   const steps: Step[] = [
     {
-      id: 'bee',
-      icon: '🐝',
-      title: 'Connect Bee Wearable',
-      body: 'Your Bee wearable captures your client sessions. Once connected, your conversations are automatically summarized into draft clinical notes right on your machine — ensuring absolute privacy and saving you hours of writing.',
-      action: beeConnected ? undefined : { label: 'Connect Bee', onClick: onConnectBee },
-      state: beeConnected ? 'done' : 'pending',
+      id: 'pocket',
+      icon: '🎙️',
+      title: 'Pocket Recorder',
+      body: 'Your Pocket recorder captures each client session and sends it straight to Innerlume, where it becomes a draft clinical note for you to review — saving you hours of writing.',
+      state: pocketReady ? 'done' : 'waiting',
+      waitingNote: pocketReady
+        ? undefined
+        : 'Richmond is connecting your Pocket account — nothing for you to do.',
     },
     {
       id: 'pb',
@@ -71,9 +74,9 @@ export function Onboarding({ courierState, onConnectBee, onDismiss }: Props) {
           <img className="il-onboard__logo" src="/emblem.png" alt="Innerlume" />
           <h1 className="il-onboard__title">Welcome to your practice dashboard</h1>
           <p className="il-onboard__sub">
-            This app quietly handles the paperwork after each session — turning your Bee conversations
-            into draft notes, tracking refills, and keeping your client records up to date. You review
-            and approve; it does the rest.
+            This app quietly handles the paperwork after each session — turning your recorded
+            sessions into draft notes, tracking refills, and keeping your client records up to date.
+            You review and approve; it does the rest.
           </p>
         </div>
 

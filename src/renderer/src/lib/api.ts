@@ -12,6 +12,7 @@ import type {
   OfficeHours,
   OutlookStatus,
   Overview,
+  PocketStatus,
   RefillDigest,
   RefillSendResponse,
   ReminderKind,
@@ -112,7 +113,7 @@ export function fetchServices(backendUrl: string, signal?: AbortSignal): Promise
 }
 
 
-/** Bee conversations that didn't correlate — need manual tagging. */
+/** Recordings that didn't correlate — need manual tagging. */
 export function fetchUnmatched(
   backendUrl: string,
   signal?: AbortSignal,
@@ -481,6 +482,11 @@ export function runCadence(backendUrl: string): Promise<{ scanned: number; sent:
 // --- Outlook connection (WF3) ------------------------------------------------
 
 /** Current Outlook connection status (open endpoint). */
+/** Is Pocket actually feeding us recordings? (GET /pocket/status) */
+export function fetchPocketStatus(backendUrl: string, signal?: AbortSignal): Promise<PocketStatus> {
+  return json<PocketStatus>(`${backendUrl}/pocket/status`, { signal });
+}
+
 export function fetchOutlookStatus(backendUrl: string, signal?: AbortSignal): Promise<OutlookStatus> {
   return json<OutlookStatus>(`${backendUrl}/auth/outlook/status`, { signal });
 }

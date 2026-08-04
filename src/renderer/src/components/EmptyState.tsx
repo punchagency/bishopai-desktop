@@ -62,7 +62,7 @@ export const EMPTY_STATE_PRESETS: Record<EmptyStateVariant, Preset> = {
   unmatched: {
     icon: <IconInbox size={24} />,
     title: "Everything's matched",
-    body: "Bee conversations we can't automatically tie to an appointment land here so you can tag the client by hand. There's nothing waiting right now.",
+    body: "Recordings we can't automatically tie to an appointment land here so you can tag the client by hand. There's nothing waiting right now.",
   },
 };
 

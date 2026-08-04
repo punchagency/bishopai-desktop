@@ -1,7 +1,6 @@
 import { app, Menu, nativeImage, Tray } from 'electron';
 import { join } from 'node:path';
 import { existsSync } from 'node:fs';
-import { courier, type CourierStatus } from './courier';
 
 let tray: Tray | null = null;
 
@@ -43,26 +42,15 @@ export function createTray(ensureWindow: () => void): void {
     return;
   }
 
-  const rebuild = (s: CourierStatus) => {
-    tray?.setToolTip(`Innerlume — ${s.message}`);
-    tray?.setContextMenu(
-      Menu.buildFromTemplate([
-        { label: 'Open Innerlume', click: ensureWindow },
-        { type: 'separator' },
-        { label: statusLabel(s), enabled: false },
-        { label: 'Connect Bee…', enabled: s.state !== 'connected', click: () => void courier.connect() },
-        { type: 'separator' },
-        { label: 'Quit Innerlume', click: () => app.quit() },
-      ]),
-    );
-  };
-
-  rebuild(courier.status());
-  courier.on('status', rebuild);
+  // No recorder status here any more: Pocket delivers to the backend, so the
+  // tray has nothing local to report and is purely a way back to the window.
+  tray.setToolTip('Innerlume');
+  tray.setContextMenu(
+    Menu.buildFromTemplate([
+      { label: 'Open Innerlume', click: ensureWindow },
+      { type: 'separator' },
+      { label: 'Quit Innerlume', click: () => app.quit() },
+    ]),
+  );
   tray.on('click', ensureWindow); // Windows/Linux: click opens the dashboard
-}
-
-function statusLabel(s: CourierStatus): string {
-  const dot = { connected: '🟢', connecting: '🟡', error: '🔴', disconnected: '⚪' }[s.state];
-  return `${dot} ${s.message}`;
 }

@@ -5,7 +5,7 @@ import { Badge } from '../components/Badge';
 import { Skeleton } from '../components/Skeleton';
 import { fetchOverview, fetchTasks, fetchUpcomingReminders, setReminderCancelled, updateTask } from '../lib/api';
 import type {
-  CourierStatus,
+  PocketStatus,
   Overview as OverviewData,
   ScheduledReminder,
   Task,
@@ -16,7 +16,7 @@ import type {
 const SAMPLE: OverviewData = {
   stats: { awaiting_review: 2, unmatched: 2, upcoming: 3, approved_today: 1 },
   recent_activity: [
-    { ts: new Date().toISOString(), kind: 'conversation', text: 'Bee conversation matched' },
+    { ts: new Date().toISOString(), kind: 'conversation', text: 'Recording matched to an appointment' },
     { ts: new Date().toISOString(), kind: 'draft', text: 'Session note drafted for Maya Chen' },
   ],
   upcoming: [{ starts_at: new Date().toISOString(), status: 'confirmed', client_name: 'Maya Chen' }],
@@ -24,11 +24,11 @@ const SAMPLE: OverviewData = {
 
 interface Props {
   backendUrl: string;
-  courier: CourierStatus;
+  pocket: PocketStatus | null;
   onNavigate: (v: ViewKey) => void;
 }
 
-export function Overview({ backendUrl, courier, onNavigate }: Props) {
+export function Overview({ backendUrl, pocket, onNavigate }: Props) {
   const [data, setData] = useState<OverviewData | null>(null);
   const [offline, setOffline] = useState(false);
 
@@ -66,11 +66,18 @@ export function Overview({ backendUrl, courier, onNavigate }: Props) {
   // Notifications are derived from live state + known roadmap blockers.
   const notes: FeedRow[] = [];
   if (n(d.stats.unmatched) > 0)
-    notes.push({ id: 'unmatched', dot: 'warning', title: `${n(d.stats.unmatched)} Bee conversations need tagging`, meta: 'Unmatched' });
+    notes.push({ id: 'unmatched', dot: 'warning', title: `${n(d.stats.unmatched)} recordings need tagging`, meta: 'Unmatched' });
   if (n(d.stats.awaiting_review) > 0)
     notes.push({ id: 'review', dot: 'accent', title: `${n(d.stats.awaiting_review)} items awaiting your review`, meta: 'Sessions' });
-  if (courier.state !== 'connected')
-    notes.push({ id: 'bee', dot: 'warning', title: 'Bee is not connected', meta: 'Click Connect Bee' });
+  // Recordings arrive server-side, so there is no action for her here — this
+  // says what's true and who is fixing it, rather than offering a dead button.
+  if (pocket && !pocket.healthy)
+    notes.push({
+      id: 'pocket',
+      dot: 'warning',
+      title: pocket.configured ? 'No recordings have arrived recently' : 'Pocket is not connected yet',
+      meta: pocket.configured ? 'Check your Pocket app' : 'Richmond is setting this up',
+    });
   notes.push({ id: 'pb', dot: 'neutral', title: 'PB REST API beta — approval pending', meta: 'blocks Checkout' });
   notes.push({ id: 'qb', dot: 'neutral', title: 'QuickBooks Payments not yet enabled', meta: 'blocks Checkout' });
 

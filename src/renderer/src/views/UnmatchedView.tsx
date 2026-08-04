@@ -10,7 +10,8 @@ import { UnmatchedDetail } from './UnmatchedDetail';
 const SAMPLE: UnmatchedConversation[] = [
   {
     id: 's1',
-    bee_id: 'bee-unmatched-1',
+    source_id: 'rec_unmatched1',
+    source: 'pocket',
     starts_at: new Date(Date.now() - 3 * 3600e3).toISOString(),
     ends_at: new Date(Date.now() - 2.5 * 3600e3).toISOString(),
     correlation_status: 'unmatched',
@@ -57,13 +58,13 @@ export function UnmatchedView({ backendUrl, onChanged }: { backendUrl: string; o
           <h1 className="il-view__title">
             Unmatched Conversations{' '}
             <InfoPopover label="What are unmatched conversations?" title="How this works">
-              Bee captures each session's conversation and we try to tie it to the right appointment
+              Pocket captures each session and we try to tie the recording to the right appointment
               automatically. When we can't be sure, it lands here — you pick the client, and it flows
               into the review pipeline like any other session. We never auto-guess the match.
             </InfoPopover>
           </h1>
           <p className="il-view__sub">
-            Bee conversations we couldn't tie to an appointment — open one to read it in full and tag
+            Recordings we couldn't tie to an appointment — open one to read it in full and tag
             the client (we never auto-guess){offline && ' · offline preview'}
           </p>
         </div>
