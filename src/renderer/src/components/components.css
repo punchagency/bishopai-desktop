@@ -2456,6 +2456,10 @@
   font-size: 0.78rem;
   color: var(--text-muted);
 }
+.il-importv__count--over {
+  color: var(--danger, #c0392b);
+  font-weight: 600;
+}
 .il-importv__grid {
   display: grid;
   grid-template-columns: 1.15fr 1fr;
@@ -2509,4 +2513,32 @@
   font-size: 0.92rem;
   line-height: 1.55;
   color: var(--text-muted);
+}
+
+/* ── Review queue: "sessions being processed" banner ─────────────────────── */
+.il-processing {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0 0 1rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  color: var(--text);
+  font-size: 0.88rem;
+}
+.il-processing__spinner {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  border: 2px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: il-spin 0.7s linear infinite;
+}
+@keyframes il-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }

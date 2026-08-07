@@ -41,7 +41,18 @@ interface Selection {
   clientId: string | null;
 }
 
-export function ReviewQueue({ backendUrl, onChanged }: { backendUrl: string; onChanged?: () => void }) {
+export function ReviewQueue({
+  backendUrl,
+  onChanged,
+  processing = 0,
+}: {
+  backendUrl: string;
+  onChanged?: () => void;
+  /** How many recordings are still being turned into drafts, from the overview
+   *  stats. Shown as a banner so a just-imported/assigned session reads as
+   *  "working" rather than missing until its draft lands. */
+  processing?: number;
+}) {
   const [queue, setQueue] = useState<Queue | null>(null);
   const [offline, setOffline] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -211,6 +222,16 @@ export function ReviewQueue({ backendUrl, onChanged }: { backendUrl: string; onC
           Approved
         </button>
       </div>
+
+      {scope === 'pending' && processing > 0 && (
+        <div className="il-processing" role="status">
+          <span className="il-processing__spinner" aria-hidden="true" />
+          <span>
+            {processing} session{processing === 1 ? '' : 's'} being processed — the draft
+            {processing === 1 ? '' : 's'} will appear here shortly.
+          </span>
+        </div>
+      )}
 
       {total === 0 && !searching ? (
         <div className="il-view__empty">

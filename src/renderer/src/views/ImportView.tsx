@@ -18,6 +18,11 @@ interface Props {
 
 const ACCEPT = '.txt,.md,.vtt,.srt,.docx,text/plain';
 
+// Mirrors MAX_TRANSCRIPT_CHARS on the server (routes/review.ts). Kept in sync by
+// hand so we can refuse an over-length transcript here — with a clear count —
+// instead of letting the upload come back a 400.
+const MAX_TRANSCRIPT_CHARS = 200_000;
+
 /**
  * Turn a dropped/chosen file into transcript text. Word (.docx) is zipped XML,
  * not text, so it goes through mammoth's raw-text extraction (browser path, over
@@ -128,6 +133,11 @@ export function ImportView({
     setBusy(true);
     setError(null);
     try {
+      if (text.length > MAX_TRANSCRIPT_CHARS) {
+        setError(`Transcript is too long (${text.length.toLocaleString()} characters, max ${MAX_TRANSCRIPT_CHARS.toLocaleString()}). Trim it or split the session.`);
+        setBusy(false);
+        return;
+      }
       // A date-only value is a local calendar day; send it as local noon so the
       // session lands on that day regardless of timezone, not the day before.
       const occurredAt = date ? new Date(`${date}T12:00:00`).toISOString() : undefined;
@@ -153,6 +163,9 @@ export function ImportView({
       setBusy(false);
     }
   };
+
+  const chars = text.trim().length;
+  const tooLong = chars > MAX_TRANSCRIPT_CHARS;
 
   const body = done ? (
     <div className="il-importv__done">
@@ -336,19 +349,21 @@ export function ImportView({
             </>
           ) : (
             <>
-              <span className="il-importv__count">
-                {text.trim() ? `${text.trim().length.toLocaleString()} characters` : ''}
+              <span className={`il-importv__count ${tooLong ? 'il-importv__count--over' : ''}`}>
+                {chars
+                  ? `${chars.toLocaleString()} / ${MAX_TRANSCRIPT_CHARS.toLocaleString()} characters${tooLong ? ' — too long' : ''}`
+                  : ''}
               </span>
               <Button variant="ghost" onClick={onClose} disabled={busy}>
                 Cancel
               </Button>
-              <Button variant="secondary" onClick={() => run(false)} disabled={!text.trim() || busy}>
+              <Button variant="secondary" onClick={() => run(false)} disabled={!text.trim() || tooLong || busy}>
                 Import without attaching
               </Button>
               <Button
                 variant="primary"
                 onClick={() => run(true)}
-                disabled={!text.trim() || !clientId || busy}
+                disabled={!text.trim() || !clientId || tooLong || busy}
               >
                 {busy ? 'Importing…' : 'Import & attach'}
               </Button>

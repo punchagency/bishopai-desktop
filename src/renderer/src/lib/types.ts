@@ -516,6 +516,8 @@ export type WorkflowStatus = 'live' | 'pending' | 'planned';
 export interface OverviewStats {
   awaiting_review: number | string;
   unmatched: number | string;
+  /** Matched recordings whose extraction is still running (pending/processing/retrying). */
+  processing?: number | string;
   upcoming: number | string;
   approved_today: number | string;
   refills_due?: number | string;

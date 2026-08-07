@@ -40,6 +40,9 @@ export function App() {
     setShowOnboarding(false);
   };
   const [counts, setCounts] = useState<Partial<Record<ViewKey, number>>>({});
+  // Recordings still extracting — surfaced as a "processing" banner in the Review
+  // Queue (not a nav badge, since these aren't yet actionable drafts).
+  const [processing, setProcessing] = useState(0);
   const [backendOnline, setBackendOnline] = useState(true);
   // Manual transcript import: whether the modal is open, what text to prefill it
   // with (from a dropped file), and whether a file is currently being dragged in.
@@ -92,10 +95,12 @@ export function App() {
           engagement: num(d.stats.leads_active),
           checkout: num(d.stats.checkouts_awaiting),
         });
+        setProcessing(num(d.stats.processing));
       })
       .catch(() => {
         setBackendOnline(false);
         setCounts({});
+        setProcessing(0);
       });
   }, [backendUrl]);
 
@@ -211,7 +216,9 @@ export function App() {
         />
         <main className="il-main">
           {view === 'overview' && <Overview backendUrl={backendUrl} pocket={pocket} onNavigate={setView} />}
-          {view === 'review' && <ReviewQueue backendUrl={backendUrl} onChanged={refreshCounts} />}
+          {view === 'review' && (
+            <ReviewQueue backendUrl={backendUrl} onChanged={refreshCounts} processing={processing} />
+          )}
           {view === 'unmatched' && <UnmatchedView backendUrl={backendUrl} onChanged={refreshCounts} />}
           {view === 'checkout' && <CheckoutView backendUrl={backendUrl} onChanged={refreshCounts} />}
           {view === 'refills' && <RefillsView backendUrl={backendUrl} onChanged={refreshCounts} />}
