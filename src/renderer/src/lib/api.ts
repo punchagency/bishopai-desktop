@@ -138,6 +138,26 @@ export function fetchCandidates(
   return json(`${backendUrl}/review/unmatched/${id}/candidates`);
 }
 
+/**
+ * Import a transcript by hand (paste or drag-drop) — no recorder involved.
+ * Lands an unmatched conversation (deduplicated server-side on the transcript
+ * hash); the returned correlation says whether the given date happened to
+ * auto-match a booked appointment. Attach it from the Unmatched view afterward.
+ */
+export function importTranscript(
+  backendUrl: string,
+  body: { transcript: string; occurredAt?: string },
+): Promise<{ conversation_id: string; correlation: { status: 'matched' | 'unmatched' } }> {
+  return json(`${backendUrl}/review/import`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      transcript: body.transcript,
+      ...(body.occurredAt ? { occurred_at: body.occurredAt } : {}),
+    }),
+  });
+}
+
 /** Manually tie a conversation to an appointment (triggers extraction). */
 export function matchConversation(backendUrl: string, id: string, appointmentId: string): Promise<unknown> {
   return json(`${backendUrl}/review/unmatched/${id}/match`, {

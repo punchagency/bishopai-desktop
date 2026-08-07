@@ -2208,3 +2208,305 @@
   border-radius: 2px;
   font-weight: 500;
 }
+
+/* ── Drag-and-drop a transcript file onto the window ──────────────────────── */
+/* Purely a cue: the actual drop is handled by window listeners in App, so this
+   overlay never intercepts pointer/drop events. Sits just below the modal
+   scrim (9998) so an already-open modal is never covered. */
+.il-dropzone {
+  position: fixed;
+  inset: 0;
+  z-index: 9997;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem;
+  background: color-mix(in srgb, var(--accent) 14%, rgba(21, 8, 3, 0.42));
+  backdrop-filter: blur(2px);
+  animation: il-fade-in 120ms ease-out;
+}
+.il-dropzone__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  width: min(440px, 80vw);
+  padding: 2.2rem 2rem;
+  border: 2px dashed color-mix(in srgb, var(--accent) 60%, var(--border));
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-md);
+  text-align: center;
+  animation: il-pop-in 140ms ease-out;
+}
+.il-dropzone__icon {
+  font-size: 1.9rem;
+  line-height: 1;
+  color: var(--accent);
+}
+.il-dropzone__title {
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+}
+.il-dropzone__sub {
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+/* ── Import transcript — shared pieces (drop target, file chip, badges) ────── */
+/* Click-or-drop target. */
+.il-import__drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 1.5rem 1rem;
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 120ms ease, background 120ms ease, color 120ms ease;
+}
+.il-import__drop:hover,
+.il-import__drop:focus-visible {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  color: var(--text);
+}
+.il-import__drop--hot {
+  border-color: var(--accent);
+  border-style: solid;
+  background: var(--accent-soft);
+  color: var(--text);
+}
+.il-import__drop-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--accent);
+}
+.il-import__drop-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.9rem;
+}
+.il-import__drop-text strong {
+  color: var(--text);
+  font-weight: 600;
+}
+.il-import__drop-sub {
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+}
+/* Selected-file chip. */
+.il-import__file {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: 100%;
+  padding: 0.3rem 0.4rem 0.3rem 0.75rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.il-import__file-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.il-import__file-clear {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--text);
+  font-size: 0.7rem;
+  cursor: pointer;
+  flex: none;
+}
+.il-import__file-clear:hover {
+  background: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+/* "or paste" divider. */
+.il-import__or {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0.9rem 0 0.6rem;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.il-import__or::before,
+.il-import__or::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.il-import__date {
+  width: auto;
+  min-width: 150px;
+}
+.il-import__optional {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text-muted);
+}
+/* Success badges (shared by the done state). */
+.il-import__badge {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+.il-import__badge--matched {
+  background: color-mix(in srgb, var(--success) 20%, transparent);
+  color: var(--success);
+}
+.il-import__badge--unmatched {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+@keyframes il-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes il-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+}
+
+/* ── Import transcript — full-screen sheet (ImportView) ───────────────────── */
+.il-importv__scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: rgba(21, 8, 3, 0.42);
+  backdrop-filter: blur(2px);
+  animation: il-fade-in 120ms ease-out;
+}
+.il-importv {
+  display: flex;
+  flex-direction: column;
+  width: min(960px, 94vw);
+  max-height: 90vh;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  animation: il-pop-in 150ms ease-out;
+}
+.il-importv__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.1rem 1.4rem;
+  border-bottom: 1px solid var(--border);
+}
+.il-importv__title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+}
+.il-importv__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1.4rem;
+}
+.il-importv__foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  padding: 0.9rem 1.4rem;
+  border-top: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.il-importv__foot .il-error {
+  margin-right: auto;
+}
+.il-importv__count {
+  margin-right: auto;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.il-importv__grid {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 1.4rem;
+}
+@media (max-width: 760px) {
+  .il-importv__grid {
+    grid-template-columns: 1fr;
+  }
+}
+.il-importv__col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  min-width: 0;
+}
+.il-importv__area {
+  min-height: 280px;
+  flex: 1;
+}
+.il-importv__attach {
+  gap: 0.9rem;
+}
+.il-importv__clients {
+  max-height: 260px;
+  overflow-y: auto;
+  margin: 0;
+}
+.il-importv__date-field {
+  margin-top: 0.2rem;
+}
+.il-importv__hint {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+.il-importv__done {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  padding: 1.5rem 0.5rem;
+}
+.il-importv__done-title {
+  margin: 0 0 0.35rem;
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+}
+.il-importv__done-text {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+}

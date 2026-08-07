@@ -14,6 +14,11 @@ import { Login } from './views/Login';
 import { fetchAuthStatus, fetchOverview, fetchPocketStatus, setAuthToken, setUnauthorizedHandler } from './lib/api';
 import type { AuthStatus, PocketStatus, ViewKey } from './lib/types';
 import { Onboarding } from './views/Onboarding';
+import { ImportView } from './views/ImportView';
+
+// Files we know how to read as a transcript (.docx via mammoth, the rest as
+// plain text). Anything else dropped is ignored rather than read as noise.
+const TRANSCRIPT_EXT = /\.(txt|md|vtt|srt|docx)$/i;
 
 const DEFAULT_BACKEND = 'http://localhost:3000';
 const TOKEN_KEY = 'innerlume.token';
@@ -36,6 +41,11 @@ export function App() {
   };
   const [counts, setCounts] = useState<Partial<Record<ViewKey, number>>>({});
   const [backendOnline, setBackendOnline] = useState(true);
+  // Manual transcript import: whether the modal is open, what text to prefill it
+  // with (from a dropped file), and whether a file is currently being dragged in.
+  const [importOpen, setImportOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [dragging, setDragging] = useState(false);
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
   const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null);
 
@@ -110,6 +120,58 @@ export function App() {
     return () => clearInterval(t);
   }, [refreshCounts, refreshPocket, view]);
 
+  // Drag-and-drop a transcript file anywhere on the window. The preventDefault on
+  // dragover/drop is not cosmetic: without it Electron treats the drop as a
+  // navigation and replaces the app with the file's contents. A depth counter
+  // keeps the overlay from flickering as the cursor crosses child elements.
+  useEffect(() => {
+    let depth = 0;
+    const hasFiles = (e: DragEvent) => Array.from(e.dataTransfer?.types ?? []).includes('Files');
+    const onEnter = (e: DragEvent) => {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      depth += 1;
+      setDragging(true);
+    };
+    const onOver = (e: DragEvent) => {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+    };
+    const onLeave = (e: DragEvent) => {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      depth = Math.max(0, depth - 1);
+      if (depth === 0) setDragging(false);
+    };
+    const onDrop = (e: DragEvent) => {
+      e.preventDefault();
+      depth = 0;
+      setDragging(false);
+      const file = e.dataTransfer?.files?.[0];
+      if (!file || !TRANSCRIPT_EXT.test(file.name)) return;
+      // Hand the File to the import view, which reads it (.docx included). We
+      // don't read it here — file.text() would corrupt a zipped .docx.
+      setImportFile(file);
+      setImportOpen(true);
+    };
+    window.addEventListener('dragenter', onEnter);
+    window.addEventListener('dragover', onOver);
+    window.addEventListener('dragleave', onLeave);
+    window.addEventListener('drop', onDrop);
+    return () => {
+      window.removeEventListener('dragenter', onEnter);
+      window.removeEventListener('dragover', onOver);
+      window.removeEventListener('dragleave', onLeave);
+      window.removeEventListener('drop', onDrop);
+    };
+  }, []);
+
+  const openImport = useCallback(() => {
+    setImportFile(null);
+    setImportOpen(true);
+  }, []);
+
   // Gate the whole app behind login when Nicole has it turned on.
   const needsLogin = authStatus?.enabled && !token;
   if (needsLogin) {
@@ -119,7 +181,25 @@ export function App() {
   return (
     <div className="il-app">
       {showOnboarding && <Onboarding pocket={pocket} onDismiss={dismissOnboarding} />}
-      <TopBar pocket={pocket} backendOnline={backendOnline} />
+      {importOpen && (
+        <ImportView
+          backendUrl={backendUrl}
+          initialFile={importFile}
+          onClose={() => setImportOpen(false)}
+          onImported={refreshCounts}
+          onNavigate={setView}
+        />
+      )}
+      {dragging && (
+        <div className="il-dropzone" aria-hidden="true">
+          <div className="il-dropzone__card">
+            <span className="il-dropzone__icon">⤓</span>
+            <span className="il-dropzone__title">Drop to import transcript</span>
+            <span className="il-dropzone__sub">.txt · .md · .docx · .vtt · .srt</span>
+          </div>
+        </div>
+      )}
+      <TopBar pocket={pocket} backendOnline={backendOnline} onImport={() => openImport()} />
 
       <div className="il-body">
         <Sidebar

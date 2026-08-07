@@ -1,10 +1,12 @@
 import { StatusDot } from './StatusDot';
 import { ThemeToggle } from './ThemeToggle';
+import { Button } from './Button';
 import type { PocketStatus } from '../lib/types';
 
 interface TopBarProps {
   pocket: PocketStatus | null;
   backendOnline: boolean;
+  onImport: () => void;
 }
 
 /**
@@ -43,7 +45,7 @@ function pocketLabel(p: PocketStatus | null): { state: 'connected' | 'connecting
   };
 }
 
-export function TopBar({ pocket, backendOnline }: TopBarProps) {
+export function TopBar({ pocket, backendOnline, onImport }: TopBarProps) {
   const p = pocketLabel(pocket);
   return (
     <header className="il-topbar">
@@ -61,6 +63,14 @@ export function TopBar({ pocket, backendOnline }: TopBarProps) {
         {p.text}
       </span>
       <div className="il-topbar__actions">
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onImport}
+          title="Paste or drop a transcript recorded elsewhere"
+        >
+          Import transcript
+        </Button>
         <ThemeToggle />
       </div>
     </header>
