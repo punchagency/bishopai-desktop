@@ -6,6 +6,7 @@ import { InfoPopover } from '../components/InfoPopover';
 import { SearchBar } from '../components/SearchBar';
 import { clearCustomerMap, fetchCustomerMap, setCustomerMap, syncCustomerMap } from '../lib/api';
 import type { CustomerMapData, CustomerSyncReport } from '../lib/types';
+import { IconAlertTriangle } from '../components/Icons';
 
 // Settings panel: map each client to their QuickBooks customer so live checkout
 // can pull the right invoice and reconciliation posts against the right account.
@@ -129,8 +130,8 @@ export function CustomerMapCard({ backendUrl }: { backendUrl: string }) {
             </p>
           )}
           {report?.ambiguous.map((a) => (
-            <div key={a.clientId} className="il-view__sub">
-              ⚠ {a.clientName}: multiple matches ({a.candidateIds.join(', ')}) — set one below.
+            <div key={a.clientId} className="il-view__sub" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <IconAlertTriangle size={14} /> {a.clientName}: multiple matches ({a.candidateIds.join(', ')}) — set one below.
             </div>
           ))}
 

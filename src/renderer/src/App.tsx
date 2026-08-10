@@ -15,6 +15,7 @@ import { fetchAuthStatus, fetchOverview, fetchPocketStatus, setAuthToken, setUna
 import type { AuthStatus, PocketStatus, ViewKey } from './lib/types';
 import { Onboarding } from './views/Onboarding';
 import { ImportView } from './views/ImportView';
+import { IconDownload } from './components/Icons';
 
 // Files we know how to read as a transcript (.docx via mammoth, the rest as
 // plain text). Anything else dropped is ignored rather than read as noise.
@@ -198,7 +199,9 @@ export function App() {
       {dragging && (
         <div className="il-dropzone" aria-hidden="true">
           <div className="il-dropzone__card">
-            <span className="il-dropzone__icon">⤓</span>
+            <span className="il-dropzone__icon">
+              <IconDownload size={32} />
+            </span>
             <span className="il-dropzone__title">Drop to import transcript</span>
             <span className="il-dropzone__sub">.txt · .md · .docx · .vtt · .srt</span>
           </div>

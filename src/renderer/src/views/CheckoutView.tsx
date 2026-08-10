@@ -165,7 +165,7 @@ export function CheckoutView({ backendUrl, onChanged }: { backendUrl: string; on
             >
               <div className="il-systems">
                 {systemsFor(c.status).map((s) => (
-                  <span key={s.name} className="il-system" title={`${s.name} — ${s.hint}${s.done ? ' ✓' : ' (pending)'}`}>
+                  <span key={s.name} className="il-system" title={`${s.name} — ${s.hint}${s.done ? ' (done)' : ' (pending)'}`}>
                     <span className={`il-dot il-dot--${s.done ? 'connected' : 'disconnected'}`} /> {s.name}
                   </span>
                 ))}

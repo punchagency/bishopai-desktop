@@ -4,6 +4,7 @@ import { Button } from '../components/Button';
 import { assignConversationToClient, fetchClients, importTranscript } from '../lib/api';
 import { formatDate } from '../lib/format';
 import type { ClientSummary, ViewKey } from '../lib/types';
+import { IconCheck, IconDownload } from '../components/Icons';
 
 interface Props {
   backendUrl: string;
@@ -173,7 +174,7 @@ export function ImportView({
         className={`il-import__badge il-import__badge--${done.kind === 'unmatched' ? 'unmatched' : 'matched'}`}
         aria-hidden="true"
       >
-        {done.kind === 'unmatched' ? '↳' : '✓'}
+        {done.kind === 'unmatched' ? '↳' : <IconCheck size={24} />}
       </span>
       <div>
         <h3 className="il-importv__done-title">
@@ -213,7 +214,7 @@ export function ImportView({
           }}
         >
           <span className="il-import__drop-icon" aria-hidden="true">
-            ⤓
+            <IconDownload size={32} />
           </span>
           {filename ? (
             <span className="il-import__file">

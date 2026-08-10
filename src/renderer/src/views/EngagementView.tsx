@@ -4,8 +4,8 @@ import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { StatCard } from '../components/StatCard';
 import { Feed, type FeedRow } from '../components/Feed';
-import { EmailTemplatesCard } from '../components/EmailTemplatesCard';
-import { IconClock, IconEdit, IconCheckCircle, IconXCircle } from '../components/Icons';
+import { EmailTemplatesCard, SAMPLE_TEMPLATES } from '../components/EmailTemplatesCard';
+import { IconClock, IconEdit, IconCheckCircle, IconXCircle, IconMail, IconActivity, IconSend } from '../components/Icons';
 import {
   fetchEngagementActivity,
   fetchEngagementLeads,
@@ -98,7 +98,8 @@ interface EmailEditorProps {
   isCustomDraft?: boolean;
   recipientEmail?: string | null;
   backendUrl: string;
-  onSaved: () => void;
+  offline?: boolean;
+  onSaved: (updatedDraft?: { subject: string; body: string; is_custom: boolean }) => void;
   onSent: () => void;
   onClose: () => void;
 }
@@ -111,6 +112,7 @@ function InlineEmailEditor({
   isCustomDraft,
   recipientEmail,
   backendUrl,
+  offline = false,
   onSaved,
   onSent,
   onClose,
@@ -134,6 +136,14 @@ function InlineEmailEditor({
     setBusy(true);
     setError(null);
     try {
+      if (offline) {
+        setSuccess('Draft saved for scheduled send (offline)');
+        setTimeout(() => {
+          onSaved({ subject: subject.trim(), body: body.trim(), is_custom: true });
+          onClose();
+        }, 500);
+        return;
+      }
       await saveLeadDraft(backendUrl, leadId, step, subject.trim(), body.trim());
       setSuccess('Draft saved for scheduled send');
       setTimeout(() => {
@@ -152,6 +162,14 @@ function InlineEmailEditor({
     setBusy(true);
     setError(null);
     try {
+      if (offline) {
+        setSuccess('Email sent! (offline)');
+        setTimeout(() => {
+          onSent();
+          onClose();
+        }, 500);
+        return;
+      }
       await sendLeadEmail(backendUrl, leadId, { step, subject: subject.trim(), body: body.trim() });
       setSuccess('Email sent!');
       setTimeout(() => {
@@ -169,6 +187,16 @@ function InlineEmailEditor({
     setBusy(true);
     setError(null);
     try {
+      if (offline) {
+        const original = SAMPLE_TEMPLATES.find((t) => t.step === step);
+        onSaved({
+          subject: original?.subject ?? '',
+          body: original?.body ?? '',
+          is_custom: false,
+        });
+        onClose();
+        return;
+      }
       await resetLeadDraft(backendUrl, leadId, step);
       onSaved();
       onClose();
@@ -248,7 +276,7 @@ function InlineEmailEditor({
 
 // ── Lead card with inline history & email customization ───────────────────────
 function LeadCard({
-  lead, pending, onStop, onReload, backendUrl, offline,
+  lead, pending, onStop, onReload, backendUrl, offline, onSaved, onSent,
 }: {
   lead: EngagementLead;
   pending: string | null;
@@ -256,6 +284,8 @@ function LeadCard({
   onReload: () => void;
   backendUrl: string;
   offline: boolean;
+  onSaved: (updatedDraft?: { subject: string; body: string; is_custom: boolean }) => void;
+  onSent: () => void;
 }) {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -284,10 +314,9 @@ function LeadCard({
   const hasNextStep = !!(lead.next_step && lead.next_subject);
 
   return (
-    <div className="il-lead-card">
+    <div className={`il-lead-card ${historyOpen || editOpen ? 'il-lead-card--open' : ''}`}>
       <Card
         title={lead.email ?? 'Unknown lead'}
-        meta={`${humanize(lead.status)}${lead.sent_steps.length ? ` · ${lead.sent_steps.length} sent` : ''}`}
         actions={
           <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
             {lead.is_custom_draft && (
@@ -296,43 +325,67 @@ function LeadCard({
                 Custom draft
               </Badge>
             )}
-            {lead.next_action === 'send' ? (
-              <Badge tone="accent">Next: {humanize(lead.next_step)}</Badge>
-            ) : lead.next_action === 'deactivate' ? (
+            {lead.next_action === 'deactivate' && (
               <Badge tone="warning">Deactivating</Badge>
-            ) : (
-              <Badge tone={STATUS_TONE[lead.status] ?? 'neutral'}>{humanize(lead.status)}</Badge>
             )}
           </div>
         }
       >
-        {/* Pending subject — glanceable without any click */}
+        {/* Metadata info row */}
+        <div className="il-lead__meta-row">
+          <Badge tone={STATUS_TONE[lead.status] ?? 'neutral'}>{humanize(lead.status)}</Badge>
+          <span className="il-lead__meta-item">
+            <IconMail size={13} />
+            {lead.sent_steps.length ? `${lead.sent_steps.length} sent` : 'No sends'}
+          </span>
+          {Number(lead.activity_count) > 0 && (
+            <span className="il-lead__meta-item" title={`${lead.activity_count} site events`}>
+              <IconActivity size={13} />
+              {lead.activity_count} event{Number(lead.activity_count) === 1 ? '' : 's'}
+            </span>
+          )}
+        </div>
+
+        {/* Premium Next Email/Step Box */}
         {lead.next_subject && (
-          <p className="il-lead__next-subject" title="Next email subject">
-            <span className="il-lead__next-label">Next email: </span>
-            {lead.next_subject}
-            {lead.next_send_at && (
-              <span className="il-lead__next-when"> · {relativeFromNow(lead.next_send_at)}</span>
-            )}
-          </p>
+          <div className="il-lead__next-step">
+            <div className="il-lead__next-step-badge-row">
+              <span className="il-lead__next-step-pill">
+                <IconSend size={12} />
+                Next: <strong>{humanize(lead.next_step)}</strong>
+              </span>
+              {lead.next_send_at && (
+                <span className="il-lead__next-step-time">
+                  <IconClock size={12} />
+                  {relativeFromNow(lead.next_send_at)}
+                </span>
+              )}
+            </div>
+            <div className="il-lead__next-step-subject">
+              <span className="il-lead__next-step-subject-label">Subject:</span>
+              <span className="il-lead__next-step-subject-text">{lead.next_subject}</span>
+            </div>
+          </div>
         )}
-        <div className="il-card__row">
-          <span className="il-card__meta">{Number(lead.activity_count)} site event{Number(lead.activity_count) === 1 ? '' : 's'}</span>
-          <div className="il-lead__actions">
+
+        <div className="il-card__row" style={{ marginTop: '0.9rem', alignItems: 'center' }}>
+          <div className="il-lead__actions" style={{ marginLeft: 'auto', display: 'flex', flexWrap: 'wrap', gap: '0.35rem', justifyContent: 'flex-end', width: '100%' }}>
             {hasNextStep && (
               <Button
                 variant={lead.is_custom_draft ? 'secondary' : 'ghost'}
+                size="sm"
                 onClick={() => setEditOpen(!editOpen)}
                 id={`edit-lead-${lead.id}`}
               >
-                {editOpen ? 'Close edit' : lead.is_custom_draft ? 'Edit draft' : 'Customize email'}
+                {editOpen ? 'Close' : lead.is_custom_draft ? 'Edit draft' : 'Customize'}
               </Button>
             )}
-            <Button variant="ghost" onClick={toggleHistory} id={`history-${lead.id}`}>
-              {historyOpen ? 'Hide history' : 'History'}
+            <Button variant="ghost" size="sm" onClick={toggleHistory} id={`history-${lead.id}`}>
+              {historyOpen ? 'Hide' : 'History'}
             </Button>
             <Button
               variant="ghost"
+              size="sm"
               disabled={pending === lead.id || lead.status === 'closed'}
               onClick={() => onStop(lead.id)}
             >
@@ -352,8 +405,9 @@ function LeadCard({
           isCustomDraft={lead.is_custom_draft}
           recipientEmail={lead.email}
           backendUrl={backendUrl}
-          onSaved={onReload}
-          onSent={onReload}
+          offline={offline}
+          onSaved={onSaved}
+          onSent={onSent}
           onClose={() => setEditOpen(false)}
         />
       )}
@@ -406,19 +460,27 @@ function HistoryRow({ item }: { item: SentEmail }) {
 }
 
 // ── Queue tab row with inline customize & send ────────────────────────────────
-function QueueRow({
-  item,
-  backendUrl,
-  onReload,
-  onCancel,
-  cancelling,
-}: {
+interface QueueRowProps {
   item: QueueItem;
   backendUrl: string;
+  offline: boolean;
   onReload: () => void;
   onCancel: (id: string) => void;
   cancelling: boolean;
-}) {
+  onSaved: (updatedDraft?: { subject: string; body: string; is_custom: boolean }) => void;
+  onSent: () => void;
+}
+
+function QueueRow({
+  item,
+  backendUrl,
+  offline,
+  onReload,
+  onCancel,
+  cancelling,
+  onSaved,
+  onSent,
+}: QueueRowProps) {
   const [showBody, setShowBody] = useState(false);
   const [editing, setEditing] = useState(false);
 
@@ -477,8 +539,9 @@ function QueueRow({
           isCustomDraft={item.is_custom_draft}
           recipientEmail={item.email}
           backendUrl={backendUrl}
-          onSaved={onReload}
-          onSent={onReload}
+          offline={offline}
+          onSaved={onSaved}
+          onSent={onSent}
           onClose={() => setEditing(false)}
         />
       )}
@@ -534,7 +597,19 @@ export function EngagementView({ backendUrl, onChanged }: { backendUrl: string; 
   const [pending, setPending] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'new_contacted' | 'nurturing' | 'cancelled' | 'replied' | null>(null);
+  const [visibleCount, setVisibleCount] = useState(15);
   const sentOffset = useRef(0);
+
+  const toggleStatusFilter = (filter: 'new_contacted' | 'nurturing' | 'cancelled' | 'replied') => {
+    setStatusFilter((curr) => (curr === filter ? null : filter));
+    setVisibleCount(15);
+  };
+
+  const handleQueryChange = (val: string) => {
+    setQuery(val);
+    setVisibleCount(15);
+  };
 
   const loadLeads = useCallback(
     (signal?: AbortSignal) =>
@@ -569,10 +644,10 @@ export function EngagementView({ backendUrl, onChanged }: { backendUrl: string; 
       setLoading(true);
       return Promise.all([loadLeads(signal), loadQueue(signal), loadSent(signal)])
         .catch(() => {
-          setData(SAMPLE);
-          setActivity(SAMPLE_ACTIVITY);
-          setQueue(SAMPLE_QUEUE);
-          setSent({ rows: SAMPLE_SENT, total: SAMPLE_SENT.length });
+          setData((prev) => prev || SAMPLE);
+          setActivity((prev) => prev || SAMPLE_ACTIVITY);
+          setQueue((prev) => prev || SAMPLE_QUEUE);
+          setSent((prev) => prev || { rows: SAMPLE_SENT, total: SAMPLE_SENT.length });
           setOffline(true);
         })
         .finally(() => setLoading(false));
@@ -593,7 +668,19 @@ export function EngagementView({ backendUrl, onChanged }: { backendUrl: string; 
   };
 
   const stop = async (id: string) => {
-    if (offline) return;
+    if (offline) {
+      setData((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          leads: prev.leads.map((l) =>
+            l.id === id ? { ...l, status: 'closed', next_action: 'none' as const, next_step: null, next_subject: null } : l,
+          ),
+        };
+      });
+      setQueue((prev) => prev?.filter((q) => q.lead_id !== id) ?? null);
+      return;
+    }
     setPending(id);
     const ctrl = new AbortController();
     try {
@@ -636,9 +723,27 @@ export function EngagementView({ backendUrl, onChanged }: { backendUrl: string; 
   const byStatus = (s: string) => d.leads.filter((l) => l.status === s).length;
   const dueCount = d.leads.filter((l) => l.next_action === 'send').length;
   const needle = query.trim().toLowerCase();
-  const leads = needle
-    ? d.leads.filter((l) => (l.email ?? '').toLowerCase().includes(needle) || l.status.toLowerCase().includes(needle))
-    : d.leads;
+  const filteredLeads = d.leads.filter((l) => {
+    if (statusFilter === 'new_contacted') {
+      if (l.status !== 'new' && l.status !== 'contacted') return false;
+    } else if (statusFilter === 'nurturing') {
+      if (l.status !== 'nurturing') return false;
+    } else if (statusFilter === 'cancelled') {
+      if (l.status !== 'cancelled') return false;
+    } else if (statusFilter === 'replied') {
+      if (l.status !== 'replied') return false;
+    }
+
+    if (needle) {
+      return (
+        (l.email ?? '').toLowerCase().includes(needle) ||
+        l.status.toLowerCase().includes(needle)
+      );
+    }
+    return true;
+  });
+
+  const visibleLeads = filteredLeads.slice(0, visibleCount);
 
   const activityRows: FeedRow[] = activity.map((a) => ({
     id: a.id,
@@ -674,10 +779,34 @@ export function EngagementView({ backendUrl, onChanged }: { backendUrl: string; 
       </div>
 
       <div className="il-stats">
-        <StatCard label="New / contacted" value={byStatus('new') + byStatus('contacted')} tone="accent" />
-        <StatCard label="Nurturing" value={byStatus('nurturing')} tone="neutral" />
-        <StatCard label="Cancelled" value={byStatus('cancelled')} tone="warning" />
-        <StatCard label="Replied" value={byStatus('replied')} tone="success" />
+        <StatCard
+          label="New / contacted"
+          value={byStatus('new') + byStatus('contacted')}
+          tone="accent"
+          onClick={() => toggleStatusFilter('new_contacted')}
+          active={statusFilter === 'new_contacted'}
+        />
+        <StatCard
+          label="Nurturing"
+          value={byStatus('nurturing')}
+          tone="neutral"
+          onClick={() => toggleStatusFilter('nurturing')}
+          active={statusFilter === 'nurturing'}
+        />
+        <StatCard
+          label="Cancelled"
+          value={byStatus('cancelled')}
+          tone="warning"
+          onClick={() => toggleStatusFilter('cancelled')}
+          active={statusFilter === 'cancelled'}
+        />
+        <StatCard
+          label="Replied"
+          value={byStatus('replied')}
+          tone="success"
+          onClick={() => toggleStatusFilter('replied')}
+          active={statusFilter === 'replied'}
+        />
       </div>
 
       {/* Tab bar */}
@@ -720,21 +849,123 @@ export function EngagementView({ backendUrl, onChanged }: { backendUrl: string; 
           ) : (
             <div>
               <SearchBar
-                value={query} onChange={setQuery}
+                value={query} onChange={handleQueryChange}
                 placeholder="Search by email or status"
-                count={leads.length} total={d.leads.length}
+                count={filteredLeads.length} total={d.leads.length}
               />
-              {leads.length === 0 ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', margin: '0.4rem 0 0.8rem' }}>
+                {statusFilter ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                      Filtered by: <strong style={{ color: 'var(--text)' }}>{humanize(statusFilter.replace('_', ' / '))}</strong>
+                    </span>
+                    <Button variant="ghost" onClick={() => setStatusFilter(null)} style={{ padding: '0.1rem 0.5rem', fontSize: '0.75rem', borderRadius: '4px' }}>
+                      Clear
+                    </Button>
+                  </div>
+                ) : <div />}
+                <span className="il-card__meta" style={{ fontSize: '0.82rem' }}>
+                  Showing {Math.min(visibleCount, filteredLeads.length)} of {filteredLeads.length} leads
+                </span>
+              </div>
+              {filteredLeads.length === 0 ? (
                 <p className="il-empty">No leads match "{query.trim()}".</p>
               ) : (
-                <div className="il-grid">
-                  {leads.map((l) => (
-                    <LeadCard
-                      key={l.id} lead={l} pending={pending}
-                      onStop={stop} onReload={reloadData} backendUrl={backendUrl} offline={offline}
-                    />
-                  ))}
-                </div>
+                <>
+                  <div className="il-grid il-leads-grid">
+                    {visibleLeads.map((l) => (
+                      <LeadCard
+                        key={l.id} lead={l} pending={pending}
+                        onStop={stop} onReload={reloadData} backendUrl={backendUrl} offline={offline}
+                        onSaved={(updatedDraft) => {
+                          if (offline && updatedDraft) {
+                            setData((prev) => {
+                              if (!prev) return null;
+                              return {
+                                ...prev,
+                                leads: prev.leads.map((leadItem) =>
+                                  leadItem.id === l.id
+                                    ? {
+                                        ...leadItem,
+                                        next_subject: updatedDraft.subject,
+                                        next_body: updatedDraft.body,
+                                        is_custom_draft: updatedDraft.is_custom,
+                                      }
+                                    : leadItem,
+                                ),
+                              };
+                            });
+                            setQueue((prev) =>
+                              prev?.map((q) =>
+                                q.lead_id === l.id
+                                  ? {
+                                      ...q,
+                                      subject: updatedDraft.subject,
+                                      body: updatedDraft.body,
+                                      is_custom_draft: updatedDraft.is_custom,
+                                    }
+                                  : q,
+                              ) ?? null,
+                            );
+                          } else {
+                            reloadData();
+                          }
+                        }}
+                        onSent={() => {
+                          if (offline) {
+                            setData((prev) => {
+                              if (!prev) return null;
+                              return {
+                                ...prev,
+                                leads: prev.leads.map((leadItem) =>
+                                  leadItem.id === l.id
+                                    ? {
+                                        ...leadItem,
+                                        status: 'replied',
+                                        next_action: 'none' as const,
+                                        next_step: null,
+                                        next_subject: null,
+                                      }
+                                    : leadItem,
+                                ),
+                              };
+                            });
+                            setQueue((prev) => prev?.filter((q) => q.lead_id !== l.id) ?? null);
+                            setSent((prev) => {
+                              if (!prev) return null;
+                              const newSentItem: SentEmail = {
+                                id: Math.random().toString(),
+                                lead_id: l.id,
+                                track: l.next_step,
+                                step: l.next_step,
+                                to_email: l.email ?? 'unknown@example.com',
+                                subject: l.next_subject ?? '',
+                                body: l.next_body ?? '',
+                                dry_run: false,
+                                ok: true,
+                                error: null,
+                                sent_at: new Date().toISOString(),
+                              };
+                              return {
+                                rows: [newSentItem, ...prev.rows],
+                                total: prev.total + 1,
+                              };
+                            });
+                          } else {
+                            reloadData();
+                          }
+                        }}
+                      />
+                    ))}
+                  </div>
+                  {filteredLeads.length > visibleCount && (
+                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: '1.5rem' }}>
+                      <Button variant="primary" onClick={() => setVisibleCount((prev) => prev + 15)}>
+                        Show More ({filteredLeads.length - visibleCount} remaining)
+                      </Button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}
@@ -756,9 +987,88 @@ export function EngagementView({ backendUrl, onChanged }: { backendUrl: string; 
                   key={item.lead_id}
                   item={item}
                   backendUrl={backendUrl}
+                  offline={offline}
                   onReload={reloadData}
                   onCancel={stop}
                   cancelling={pending === item.lead_id}
+                  onSaved={(updatedDraft) => {
+                    if (offline && updatedDraft) {
+                      setData((prev) => {
+                        if (!prev) return null;
+                        return {
+                          ...prev,
+                          leads: prev.leads.map((l) =>
+                            l.id === item.lead_id
+                              ? {
+                                  ...l,
+                                  next_subject: updatedDraft.subject,
+                                  next_body: updatedDraft.body,
+                                  is_custom_draft: updatedDraft.is_custom,
+                                }
+                              : l,
+                          ),
+                        };
+                      });
+                      setQueue((prev) =>
+                        prev?.map((q) =>
+                          q.lead_id === item.lead_id
+                            ? {
+                                ...q,
+                                subject: updatedDraft.subject,
+                                body: updatedDraft.body,
+                                is_custom_draft: updatedDraft.is_custom,
+                              }
+                            : q,
+                        ) ?? null,
+                      );
+                    } else {
+                      reloadData();
+                    }
+                  }}
+                  onSent={() => {
+                    if (offline) {
+                      setData((prev) => {
+                        if (!prev) return null;
+                        return {
+                          ...prev,
+                          leads: prev.leads.map((l) =>
+                            l.id === item.lead_id
+                              ? {
+                                  ...l,
+                                  status: 'replied',
+                                  next_action: 'none' as const,
+                                  next_step: null,
+                                  next_subject: null,
+                                }
+                              : l,
+                          ),
+                        };
+                      });
+                      setQueue((prev) => prev?.filter((q) => q.lead_id !== item.lead_id) ?? null);
+                      setSent((prev) => {
+                        if (!prev) return null;
+                        const newSentItem: SentEmail = {
+                          id: Math.random().toString(),
+                          lead_id: item.lead_id,
+                          track: item.track,
+                          step: item.step,
+                          to_email: item.email ?? 'unknown@example.com',
+                          subject: item.subject,
+                          body: item.body,
+                          dry_run: false,
+                          ok: true,
+                          error: null,
+                          sent_at: new Date().toISOString(),
+                        };
+                        return {
+                          rows: [newSentItem, ...prev.rows],
+                          total: prev.total + 1,
+                        };
+                      });
+                    } else {
+                      reloadData();
+                    }
+                  }}
                 />
               ))}
             </div>
@@ -769,7 +1079,7 @@ export function EngagementView({ backendUrl, onChanged }: { backendUrl: string; 
       {/* ── Templates tab ──────────────────────────────────────────────────── */}
       {tab === 'templates' && (
         <div className="il-templates-tab">
-          <EmailTemplatesCard backendUrl={backendUrl} embedded={true} defaultOpen={true} />
+          <EmailTemplatesCard backendUrl={backendUrl} embedded={true} defaultOpen={true} offline={offline} />
         </div>
       )}
 

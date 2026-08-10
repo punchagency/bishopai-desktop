@@ -5,6 +5,7 @@ import { Modal } from '../components/Modal';
 import { Skeleton } from '../components/Skeleton';
 import { BriefPanel } from '../components/BriefPanel';
 import type { ScheduleData, UpcomingSession } from '../lib/types';
+import { IconCheck, IconAlertTriangle, IconZap, IconSave, IconClipboard } from '../components/Icons';
 
 // ---------------------------------------------------------------------------
 // ScheduleView — Nicole's weekly calendar
@@ -51,7 +52,7 @@ export function ScheduleView({ backendUrl }: Props) {
   }, [load]);
 
   if (loading && !data) return <ScheduleSkeleton />;
-  if (error)   return <div className="il-empty il-empty--error">⚠ {error}</div>;
+  if (error)   return <div className="il-empty il-empty--error" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}><IconAlertTriangle size={16} /> {error}</div>;
   if (!data)   return null;
 
   const oh = data.office_hours;
@@ -535,11 +536,11 @@ function SessionDetailView({ session, tz }: { session: UpcomingSession; tz: stri
         <div style={{ marginTop: '0.25rem' }}>
           {session.source === 'pb' ? (
             <span className="il-pill il-pill--success" style={{ display: 'inline-flex', gap: '0.35rem', alignItems: 'center' }}>
-              ⚡ Practice Better Live Sync
+              <IconZap size={13} /> Practice Better Live Sync
             </span>
           ) : (
             <span className="il-pill il-pill--planned" style={{ display: 'inline-flex', gap: '0.35rem', alignItems: 'center' }}>
-              💾 Offline Local Cache
+              <IconSave size={13} /> Offline Local Cache
             </span>
           )}
         </div>
@@ -598,7 +599,15 @@ function SlotDetailView({ startsAt, endsAt, tz }: { startsAt: string; endsAt: st
           style={{ width: '100%', justifyContent: 'center', padding: '0.65rem 0', fontWeight: 600 }}
           onClick={handleCopy}
         >
-          {copied ? '✓ Copied!' : '📋 Copy Slot Date & Time'}
+          {copied ? (
+            <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <IconCheck size={16} /> Copied!
+            </span>
+          ) : (
+            <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <IconClipboard size={16} /> Copy Slot Date & Time
+            </span>
+          )}
         </button>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { useTheme } from '../theme/useTheme';
+import { IconSun, IconMoon } from './Icons';
 
 export function ThemeToggle() {
   const { resolved, toggle } = useTheme();
@@ -8,8 +9,9 @@ export function ThemeToggle() {
       onClick={toggle}
       title={`Switch to ${resolved === 'dark' ? 'light' : 'dark'} mode`}
       aria-label="Toggle color theme"
+      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
     >
-      {resolved === 'dark' ? '☀' : '☾'}
+      {resolved === 'dark' ? <IconSun size={16} /> : <IconMoon size={16} />}
     </button>
   );
 }

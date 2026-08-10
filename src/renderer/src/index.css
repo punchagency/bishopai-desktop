@@ -185,6 +185,19 @@ h3 {
 .il-stat-btn:hover .il-stat {
   border-color: var(--accent);
 }
+.il-stat--interactive {
+  transition: all 0.15s ease;
+}
+.il-stat--interactive:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+.il-stat--active {
+  border-color: var(--accent) !important;
+  background: var(--accent-soft) !important;
+  box-shadow: var(--ring);
+}
 .il-stat--accent {
   border-left-color: var(--accent);
 }

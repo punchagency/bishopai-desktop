@@ -19,13 +19,97 @@ const TRACK_LABELS: Record<string, string> = {
   first_appointment: 'First Appointment',
 };
 
+export const SAMPLE_TEMPLATES: EmailTemplate[] = [
+  {
+    track: 'inquiry',
+    step: 'welcome',
+    subject: 'Thanks for reaching out to Innerlume',
+    body: "Hi! Thanks for your interest in working together. When you're ready, you can book a consult here — I'd love to help.",
+    is_custom: false,
+    updated_at: null,
+  },
+  {
+    track: 'inquiry',
+    step: 'nudge_3d',
+    subject: 'Still here when you’re ready',
+    body: 'Just checking in — happy to answer any questions before you book your first session.',
+    is_custom: false,
+    updated_at: null,
+  },
+  {
+    track: 'inquiry',
+    step: 'nudge_7d',
+    subject: 'A gentle nudge from Innerlume',
+    body: 'No rush at all. If now’s a good time, here’s the link to book a consult whenever it suits you.',
+    is_custom: false,
+    updated_at: null,
+  },
+  {
+    track: 'inquiry',
+    step: 'final_14d',
+    subject: 'Last note for now',
+    body: "I'll leave the door open — reach out any time and we'll find a time that works.",
+    is_custom: false,
+    updated_at: null,
+  },
+  {
+    track: 'cancelled',
+    step: 'cancelled_7d',
+    subject: 'Want to reschedule?',
+    body: 'Sorry we missed each other — would you like to find a new time that works better?',
+    is_custom: false,
+    updated_at: null,
+  },
+  {
+    track: 'cancelled',
+    step: 'cancelled_14d',
+    subject: 'Still happy to reschedule',
+    body: 'The offer stands whenever you’re ready — just reply and we’ll get you booked.',
+    is_custom: false,
+    updated_at: null,
+  },
+  {
+    track: 'maintenance',
+    step: 'maintenance_7d',
+    subject: 'Time for a check-in?',
+    body: "It's been a while since your last visit — a maintenance session can help keep your progress on track. Want to book one?",
+    is_custom: false,
+    updated_at: null,
+  },
+  {
+    track: 'maintenance',
+    step: 'maintenance_14d',
+    subject: 'Still here when you’re ready',
+    body: 'No pressure at all — whenever you’d like a tune-up, just reply and we’ll find a time that works.',
+    is_custom: false,
+    updated_at: null,
+  },
+  {
+    track: 'first_appointment',
+    step: 'first_appt_7d',
+    subject: 'How are you feeling after your first session?',
+    body: "It was great meeting you! Booking your follow-up is the best way to build on what we started — want to find a time?",
+    is_custom: false,
+    updated_at: null,
+  },
+  {
+    track: 'first_appointment',
+    step: 'first_appt_14d',
+    subject: 'A little something to get you started',
+    body: "To help you commit to your plan, here's 15% off your next visit if you book this month. Just reply and we'll set it up.",
+    is_custom: false,
+    updated_at: null,
+  },
+];
+
 interface TemplateRowProps {
   tpl: EmailTemplate;
   backendUrl: string;
+  offline?: boolean;
   onSaved: (updated: EmailTemplate) => void;
 }
 
-function TemplateRow({ tpl, backendUrl, onSaved }: TemplateRowProps) {
+function TemplateRow({ tpl, backendUrl, offline = false, onSaved }: TemplateRowProps) {
   const [editing, setEditing] = useState(false);
   const [subject, setSubject] = useState(tpl.subject);
   const [body, setBody] = useState(tpl.body);
@@ -46,6 +130,17 @@ function TemplateRow({ tpl, backendUrl, onSaved }: TemplateRowProps) {
     setBusy(true);
     setError(null);
     try {
+      if (offline) {
+        onSaved({
+          ...tpl,
+          subject: subject.trim(),
+          body: body.trim(),
+          is_custom: true,
+          updated_at: new Date().toISOString(),
+        });
+        setEditing(false);
+        return;
+      }
       const updated = await saveEmailTemplate(backendUrl, tpl.track, tpl.step, subject.trim(), body.trim());
       onSaved(updated);
       setEditing(false);
@@ -54,13 +149,25 @@ function TemplateRow({ tpl, backendUrl, onSaved }: TemplateRowProps) {
     } finally {
       setBusy(false);
     }
-  }, [backendUrl, tpl.track, tpl.step, subject, body, onSaved]);
+  }, [backendUrl, tpl, subject, body, onSaved, offline]);
 
   const reset = useCallback(async () => {
     if (!window.confirm('Reset this template to the default text?')) return;
     setBusy(true);
     setError(null);
     try {
+      if (offline) {
+        const original = SAMPLE_TEMPLATES.find((t) => t.track === tpl.track && t.step === tpl.step);
+        onSaved({
+          ...tpl,
+          subject: original?.subject ?? '',
+          body: original?.body ?? '',
+          is_custom: false,
+          updated_at: null,
+        });
+        setEditing(false);
+        return;
+      }
       const updated = await resetEmailTemplate(backendUrl, tpl.track, tpl.step);
       onSaved(updated);
       setEditing(false);
@@ -69,7 +176,7 @@ function TemplateRow({ tpl, backendUrl, onSaved }: TemplateRowProps) {
     } finally {
       setBusy(false);
     }
-  }, [backendUrl, tpl.track, tpl.step, onSaved]);
+  }, [backendUrl, tpl, onSaved, offline]);
 
   // Cmd+S / Ctrl+S to save while editing.
   useEffect(() => {
@@ -166,27 +273,36 @@ function TemplateRow({ tpl, backendUrl, onSaved }: TemplateRowProps) {
     </div>
   );
 }
-
 export function EmailTemplatesCard({
   backendUrl,
   defaultOpen = false,
   embedded = false,
+  offline = false,
 }: {
   backendUrl: string;
   defaultOpen?: boolean;
   embedded?: boolean;
+  offline?: boolean;
 }) {
   const [templates, setTemplates] = useState<EmailTemplate[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(defaultOpen);
 
   const load = useCallback(
-    (signal?: AbortSignal) =>
-      fetchEmailTemplates(backendUrl, signal)
+    (signal?: AbortSignal) => {
+      if (offline) {
+        setTemplates((prev) => prev || SAMPLE_TEMPLATES);
+        setLoading(false);
+        return Promise.resolve();
+      }
+      return fetchEmailTemplates(backendUrl, signal)
         .then((d) => setTemplates(d.templates))
-        .catch(() => {})
-        .finally(() => setLoading(false)),
-    [backendUrl],
+        .catch(() => {
+          setTemplates((prev) => prev || SAMPLE_TEMPLATES);
+        })
+        .finally(() => setLoading(false));
+    },
+    [backendUrl, offline],
   );
 
   useEffect(() => {
@@ -227,6 +343,7 @@ export function EmailTemplatesCard({
                 key={`${tpl.track}:${tpl.step}`}
                 tpl={tpl}
                 backendUrl={backendUrl}
+                offline={offline}
                 onSaved={handleSaved}
               />
             ))}
@@ -235,7 +352,6 @@ export function EmailTemplatesCard({
       )}
     </div>
   );
-
   if (embedded) {
     return (
       <div className="il-tpl-view">

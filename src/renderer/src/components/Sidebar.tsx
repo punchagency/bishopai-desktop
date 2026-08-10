@@ -1,22 +1,36 @@
 import type { ViewKey, WorkflowStatus } from '../lib/types';
+import React from 'react';
+import {
+  IconLeaf,
+  IconFileText,
+  IconInbox,
+  IconCreditCard,
+  IconRefill,
+  IconUsers,
+  IconCalendar,
+  IconActivity,
+  IconSettings,
+  IconDoubleChevronLeft,
+  IconDoubleChevronRight
+} from './Icons';
 
 interface NavItem {
   key: ViewKey;
   label: string;
-  icon: string;
+  icon: React.ReactNode;
   status?: WorkflowStatus; // shown as a small pill for workflow sections
 }
 
 const NAV: NavItem[] = [
-  { key: 'overview', label: 'Overview', icon: '◈' },
-  { key: 'review', label: 'Sessions', icon: '✎', status: 'live' },
-  { key: 'unmatched', label: 'Unmatched', icon: '⚟', status: 'live' },
-  { key: 'checkout', label: 'Checkout', icon: '＄', status: 'live' },
-  { key: 'refills', label: 'Refills', icon: '↻', status: 'live' },
-  { key: 'engagement', label: 'Engagement', icon: '◐', status: 'live' },
-  { key: 'schedule', label: 'Schedule', icon: '⊡', status: 'live' },
-  { key: 'activity', label: 'Activity', icon: '❋', status: 'live' },
-  { key: 'settings', label: 'Settings', icon: '⚙' },
+  { key: 'overview', label: 'Overview', icon: <IconLeaf size={18} /> },
+  { key: 'review', label: 'Sessions', icon: <IconFileText size={18} />, status: 'live' },
+  { key: 'unmatched', label: 'Unmatched', icon: <IconInbox size={18} />, status: 'live' },
+  { key: 'checkout', label: 'Checkout', icon: <IconCreditCard size={18} />, status: 'live' },
+  { key: 'refills', label: 'Refills', icon: <IconRefill size={18} />, status: 'live' },
+  { key: 'engagement', label: 'Engagement', icon: <IconUsers size={18} />, status: 'live' },
+  { key: 'schedule', label: 'Schedule', icon: <IconCalendar size={18} />, status: 'live' },
+  { key: 'activity', label: 'Activity', icon: <IconActivity size={18} />, status: 'live' },
+  { key: 'settings', label: 'Settings', icon: <IconSettings size={18} /> },
 ];
 
 const STATUS_LABEL: Record<WorkflowStatus, string> = { live: 'live', pending: 'soon', planned: 'plan' };
@@ -61,7 +75,9 @@ export function Sidebar({ active, counts, onSelect, collapsed, onToggle }: Sideb
         aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         aria-expanded={!collapsed}
       >
-        <span className="il-nav__icon">{collapsed ? '»' : '«'}</span>
+        <span className="il-nav__icon">
+          {collapsed ? <IconDoubleChevronRight size={18} /> : <IconDoubleChevronLeft size={18} />}
+        </span>
         <span className="il-nav__label">Collapse</span>
       </button>
     </nav>
