@@ -2542,3 +2542,491 @@
     transform: rotate(360deg);
   }
 }
+
+/* ── WF3 email visibility — Engagement view ──────────────────────────────── */
+
+/* Tab count badge (number pill inside a tab button) */
+.il-tab__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.3em;
+  padding: 0 0.3em;
+  height: 1.3em;
+  border-radius: 999px;
+  font-size: 0.75em;
+  font-weight: 700;
+  background: var(--accent);
+  color: var(--on-accent);
+  margin-left: 0.35em;
+  vertical-align: middle;
+}
+
+/* Lead card wrapper (card + collapsible history below) */
+.il-lead-card {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Inline "Next email" subject row inside a lead card */
+.il-lead__next-subject {
+  font-size: 0.83rem;
+  color: var(--text-muted);
+  margin: 0.25rem 0 0.4rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.il-lead__next-label {
+  font-weight: 600;
+  color: var(--accent-active);
+}
+.il-lead__next-when {
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+/* Action cluster inside a lead card footer */
+.il-lead__actions {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+/* Step name chip (nudge_3d → "Nudge 3d") */
+.il-lead__step-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.15rem 0.4rem;
+  flex: none;
+}
+
+/* Inline history panel (slides in under the lead card) */
+.il-lead-history {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  padding: 0.6rem 1.1rem 0.8rem;
+  margin-top: -2px;
+  animation: il-slide-in 0.15s ease;
+}
+.il-lead-history__empty {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+@keyframes il-slide-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Inline email body display (history + queue expand) */
+.il-email-body {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 0.85rem;
+  margin: 0.5rem 0 0;
+  color: var(--text);
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+/* Queue tab */
+.il-queue {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.il-queue__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.il-queue__empty {
+  padding: 1.5rem 0;
+}
+.il-queue-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  gap: 0.75rem 1rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.il-queue-row:last-child {
+  border-bottom: none;
+}
+.il-queue-row__main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+.il-queue-row__head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.il-queue-row__email {
+  font-size: 0.88rem;
+  color: var(--text);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.il-queue-row__subject {
+  font-size: 0.92rem;
+  margin: 0;
+  color: var(--text);
+  font-weight: 600;
+}
+.il-queue-row__foot {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.il-queue-row__when {
+  font-weight: 500;
+}
+.il-queue-row__body {
+  grid-column: 1 / -1;
+}
+
+/* Sent tab */
+.il-sent {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.il-sent__list {
+  display: flex;
+  flex-direction: column;
+}
+.il-sent__more {
+  padding: 1rem 0;
+  display: flex;
+  justify-content: center;
+}
+.il-sent-row {
+  padding: 0.85rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.il-sent-row:last-child {
+  border-bottom: none;
+}
+.il-sent-row__main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.il-sent-row__head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.il-sent-row__to {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--text);
+}
+.il-sent-row__subject {
+  font-size: 0.88rem;
+  margin: 0;
+  color: var(--text);
+}
+.il-sent-row__foot {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.il-sent-row__time {
+  font-weight: 500;
+}
+
+/* Utility link button (inline text affordance like "Show email") */
+.il-link {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--accent-active);
+  font-size: inherit;
+  font-family: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.il-link:hover {
+  color: var(--accent);
+}
+.il-link--sm {
+  font-size: 0.78rem;
+}
+
+/* ── Email Templates Card (Settings) ─────────────────────────────────────── */
+.il-tpl-card {
+  padding: 0;
+}
+.il-tpl-card__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 1.15rem 1.25rem 1.1rem;
+  cursor: pointer;
+  text-align: left;
+}
+.il-tpl-card__toggle:hover {
+  background: var(--surface-2);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+.il-tpl-card__toggle-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.il-tpl-card__chevron {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  flex: none;
+}
+.il-tpl-card__body {
+  padding: 0 1.25rem 1.35rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Track group within the templates card */
+.il-tpl-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.il-tpl-group__label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0 0 0.5rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Individual template row */
+.il-tpl-row {
+  padding: 0.8rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.il-tpl-row:last-child {
+  border-bottom: none;
+}
+.il-tpl-row--custom {
+  background: color-mix(in srgb, var(--accent) 4%, transparent);
+  border-radius: var(--radius-sm);
+  padding-left: 0.6rem;
+  padding-right: 0.6rem;
+  margin: 0 -0.6rem;
+}
+.il-tpl-row__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+.il-tpl-row__info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.il-tpl-row__step {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+.il-tpl-row__preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.il-tpl-row__subject-preview {
+  font-size: 0.85rem;
+  color: var(--text);
+  margin: 0;
+  font-weight: 500;
+}
+.il-tpl-row__body-preview {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* Template edit form */
+.il-tpl-row__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+.il-tpl-row__textarea {
+  min-height: 100px;
+  resize: vertical;
+  overflow: hidden; /* hidden so auto-resize works cleanly */
+}
+.il-tpl-row__charcount {
+  font-weight: 400;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.il-tpl-row__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.il-tpl-row__hint {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* ── Inline Email Editor (per-lead customization) ────────────────────────── */
+.il-queue-item-card {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid var(--border);
+}
+.il-queue-item-card:last-child {
+  border-bottom: none;
+}
+.il-queue-item-card .il-queue-row {
+  border-bottom: none;
+}
+.il-queue-row__actions {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.il-inline-editor {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.15rem;
+  margin: 0.25rem 0 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  animation: il-slide-in 0.15s ease;
+}
+.il-lead-card .il-inline-editor {
+  margin-top: -2px;
+  border-top: none;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+
+.il-inline-editor__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.il-inline-editor__title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+.il-inline-editor__target {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.il-inline-editor__textarea {
+  min-height: 120px;
+  resize: vertical;
+  line-height: 1.5;
+  font-family: var(--font-body);
+}
+
+.il-inline-editor__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--border);
+}
+.il-inline-editor__left {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.il-inline-editor__right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.il-success {
+  font-size: 0.82rem;
+  color: var(--success);
+  margin: 0;
+  font-weight: 500;
+}
+
+/* ── Templates Tab & Embedded View ───────────────────────────────────────── */
+.il-templates-tab {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+.il-tpl-view {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.il-tpl-view__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.25rem;
+}
+.il-tpl-embedded {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.35rem;
+}
+

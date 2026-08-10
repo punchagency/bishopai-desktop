@@ -449,6 +449,14 @@ export interface EngagementLead {
   sent_steps: string[];
   next_action: 'send' | 'deactivate' | 'none';
   next_step: string | null;
+  /** Subject of the next pending email — shown inline on the lead card. */
+  next_subject: string | null;
+  /** Effective body of the next pending email (for inline editing). */
+  next_body?: string | null;
+  /** ISO timestamp of when the next step fires. */
+  next_send_at: string | null;
+  /** True if this lead has a custom draft edited specifically for them. */
+  is_custom_draft?: boolean;
 }
 export interface LeadActivityItem {
   id: string;
@@ -462,6 +470,45 @@ export interface EngagementData {
   outlook_configured: boolean;
   outlook_sender: string | null;
   leads: EngagementLead[];
+}
+
+// Email template — one (track, step) pair with effective copy.
+export interface EmailTemplate {
+  track: string;
+  step: string;
+  subject: string;
+  body: string;
+  is_custom: boolean;
+  updated_at: string | null;
+}
+
+// Pending send queue item.
+export interface QueueItem {
+  lead_id: string;
+  email: string | null;
+  status: string;
+  track: string;
+  step: string;
+  subject: string;
+  body: string;
+  send_at: string;
+  /** True if this queue item has a custom draft edited specifically for this lead. */
+  is_custom_draft?: boolean;
+}
+
+// Entry from email_send_log.
+export interface SentEmail {
+  id: string;
+  lead_id: string | null;
+  track: string | null;
+  step: string | null;
+  to_email: string;
+  subject: string;
+  body: string;
+  dry_run: boolean;
+  ok: boolean;
+  error: string | null;
+  sent_at: string;
 }
 
 // One connected mailbox.

@@ -7,15 +7,18 @@ import type {
   CustomerMapData,
   CustomerSyncReport,
   ReconciliationData,
+  EmailTemplate,
   EngagementData,
   LeadActivityItem,
   OfficeHours,
   OutlookStatus,
   Overview,
   PocketStatus,
+  QueueItem,
   RefillDigest,
   RefillSendResponse,
   ReminderKind,
+  SentEmail,
   UpcomingReminders,
   ReviewContext,
   ReviewKind,
@@ -497,6 +500,104 @@ export function runCadence(backendUrl: string): Promise<{ scanned: number; sent:
     headers: { 'content-type': 'application/json' },
     body: '{}',
   });
+}
+
+/** Send an email to a specific lead immediately (with optional custom subject/body). */
+export function sendLeadEmail(
+  backendUrl: string,
+  leadId: string,
+  custom?: { step?: string; subject?: string; body?: string },
+): Promise<{ ok: boolean; step: string; subject: string }> {
+  return json(`${backendUrl}/engagement/leads/${leadId}/send`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(custom ?? {}),
+  });
+}
+
+/** Save a customized draft for a lead's upcoming email step. */
+export function saveLeadDraft(
+  backendUrl: string,
+  leadId: string,
+  step: string,
+  subject: string,
+  body: string,
+): Promise<{ lead_id: string; step: string; subject: string; body: string; is_custom_draft: boolean }> {
+  return json(`${backendUrl}/engagement/leads/${leadId}/draft`, {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ step, subject, body }),
+  });
+}
+
+/** Reset a lead's customized draft back to the track template. */
+export function resetLeadDraft(
+  backendUrl: string,
+  leadId: string,
+  step: string,
+): Promise<{ lead_id: string; step: string; reset: boolean }> {
+  return json(`${backendUrl}/engagement/leads/${leadId}/draft/${step}`, {
+    method: 'DELETE',
+  });
+}
+
+/** All leads with a pending send, sorted by send date (soonest first). */
+export function fetchEmailQueue(backendUrl: string, signal?: AbortSignal): Promise<{ queue: QueueItem[] }> {
+  return json<{ queue: QueueItem[] }>(`${backendUrl}/engagement/queue`, { signal });
+}
+
+/** Paginated sent log across all leads. */
+export function fetchSentLog(
+  backendUrl: string,
+  limit = 50,
+  offset = 0,
+  signal?: AbortSignal,
+): Promise<{ sent: SentEmail[]; total: number }> {
+  return json<{ sent: SentEmail[]; total: number }>(
+    `${backendUrl}/engagement/sent?limit=${limit}&offset=${offset}`,
+    { signal },
+  );
+}
+
+/** Per-lead email send history. */
+export function fetchLeadHistory(
+  backendUrl: string,
+  leadId: string,
+  signal?: AbortSignal,
+): Promise<{ history: SentEmail[] }> {
+  return json<{ history: SentEmail[] }>(`${backendUrl}/engagement/leads/${leadId}/history`, { signal });
+}
+
+/** All email templates with effective copy (DB override or default). */
+export function fetchEmailTemplates(
+  backendUrl: string,
+  signal?: AbortSignal,
+): Promise<{ templates: EmailTemplate[] }> {
+  return json<{ templates: EmailTemplate[] }>(`${backendUrl}/templates`, { signal });
+}
+
+/** Save an email template override (subject + body). */
+export function saveEmailTemplate(
+  backendUrl: string,
+  track: string,
+  step: string,
+  subject: string,
+  body: string,
+): Promise<EmailTemplate> {
+  return json<EmailTemplate>(`${backendUrl}/templates/${track}/${step}`, {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ subject, body }),
+  });
+}
+
+/** Reset a template to its hardcoded default. */
+export function resetEmailTemplate(
+  backendUrl: string,
+  track: string,
+  step: string,
+): Promise<EmailTemplate> {
+  return json<EmailTemplate>(`${backendUrl}/templates/${track}/${step}`, { method: 'DELETE' });
 }
 
 // --- Outlook connection (WF3) ------------------------------------------------

@@ -20,7 +20,7 @@ function loadConfig(): void {
     join(process.resourcesPath ?? '', 'innerlume.config.json'), // packaged default
     join(app.getAppPath(), 'innerlume.config.json'), // dev (project root)
   ];
-  let file: { backendUrl?: string } = {};
+  let file: { backendUrl?: string; _liveBackendUrl?: string } = {};
   for (const p of candidates) {
     try {
       if (existsSync(p)) {
@@ -31,7 +31,9 @@ function loadConfig(): void {
       /* ignore a malformed config file; fall through to the next candidate */
     }
   }
-  backendUrl = process.env.INNERLUME_BACKEND_URL ?? file.backendUrl ?? 'http://localhost:3000';
+  const useLive = process.env.INNERLUME_USE_LIVE === '1' || process.env.INNERLUME_USE_LIVE === 'true';
+  const targetUrl = useLive && file._liveBackendUrl ? file._liveBackendUrl : file.backendUrl;
+  backendUrl = process.env.INNERLUME_BACKEND_URL ?? targetUrl ?? 'http://localhost:3000';
 }
 
 // Brand assets live in desktop/build. Resolve from __dirname (out/main → ../../build)

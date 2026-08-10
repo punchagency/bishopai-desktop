@@ -6,6 +6,7 @@ import { fetchAuthStatus, login, updateAuthSettings } from '../lib/api';
 import { CustomerMapCard } from './CustomerMapCard';
 import { OutlookCard } from './OutlookCard';
 import { OfficeHoursCard } from './OfficeHoursCard';
+import { EmailTemplatesCard } from '../components/EmailTemplatesCard';
 import type { AuthStatus } from '../lib/types';
 
 // Settings — where Nicole controls the local dashboard login: turn it on/off and
@@ -132,6 +133,8 @@ export function SettingsView({
       <OutlookCard backendUrl={backendUrl} />
 
       <OfficeHoursCard backendUrl={backendUrl} />
+
+      <EmailTemplatesCard backendUrl={backendUrl} />
 
       <CustomerMapCard backendUrl={backendUrl} />
     </section>
