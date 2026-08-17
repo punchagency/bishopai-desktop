@@ -175,14 +175,36 @@ export interface Lifestyle {
   diet: string | null;
 }
 /** Where a finding came from: the practitioner's own words, and when. */
+/**
+ * How a finding's provenance was checked, strongest first. `span` means the
+ * model pointed at a numbered transcript turn and quoted it word for word;
+ * `span_near` means it pointed at the right turn but reworded it, which is the
+ * shape a reversed meaning arrives in.
+ */
+export type VerificationStatus =
+  | 'span'
+  | 'span_near'
+  | 'exact'
+  | 'near'
+  | 'unsupported'
+  | 'misattributed'
+  | 'bad_span';
+
 export interface Evidence {
   /** Dotted field path — "nrt.hta", "concerns.0", "supplements.1". */
   path: string;
   quote: string;
   at_seconds: number | null;
-  /** The quote was NOT found in the transcript. The finding is kept and flagged;
+  /** The numbered transcript turn this finding was read from. */
+  turn?: number | null;
+  /** The transcript does NOT back this finding. The finding is kept and flagged;
    *  these are the fields worth reading closely. */
   unverified?: boolean;
+  /** How the check was satisfied, or how it failed. */
+  verification?: VerificationStatus;
+  /** The cited turn's ACTUAL words, resolved by the server. Shown in place of
+   *  the model's quote wherever they differ. */
+  turn_text?: string | null;
 }
 
 /** Server-computed extraction metadata — never anything the model said. */

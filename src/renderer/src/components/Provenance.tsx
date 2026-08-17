@@ -26,15 +26,48 @@ function stamp(seconds: number | null): string {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
+/** What each verification state means where Nicole is reading, not in schema terms. */
+const NOTE: Record<string, { label: string | null; title: string }> = {
+  span: {
+    label: null,
+    title: 'Quoted word for word from this turn of the transcript. Click to jump to it.',
+  },
+  span_near: {
+    label: 'reworded',
+    title:
+      'This turn is about this finding, but the wording below is the model’s, not the practitioner’s. Read the turn — a reversed meaning looks exactly like this.',
+  },
+  exact: {
+    label: null,
+    title: 'These words appear in the transcript. Click to jump to them.',
+  },
+  near: {
+    label: 'paraphrased',
+    title: 'Close to the transcript but not word for word, and no turn was cited.',
+  },
+  misattributed: {
+    label: 'cites the wrong turn',
+    title:
+      'The model pointed at a specific turn that does not say this. Verify before approving.',
+  },
+  bad_span: {
+    label: 'cites a turn that does not exist',
+    title: 'The citation points at no real part of the transcript. Verify before approving.',
+  },
+  unsupported: {
+    label: 'not found in transcript',
+    title: 'Nothing in the transcript backs this. Verify before approving.',
+  },
+};
+
 /**
- * The source line under a field. Three states, all of them meaningful:
+ * The source line under a field.
  *
- *  - a verified quote      → confirm and move on
- *  - an UNVERIFIED quote   → the words aren't in the transcript; read closely
- *  - nothing at all        → the model filled this without pointing at anything
- *
- * The last two are exactly the fields worth Nicole's attention, so they are the
- * ones that get visual weight.
+ * What it shows is the TRANSCRIPT's words wherever they are known, not the
+ * model's rendering of them. That distinction is the whole point of citing a
+ * turn: a model that reworded "high cholesterol, but I'm not on anything" into
+ * "cholesterol is not high" produces a quote that reads as a clean finding, and
+ * the only way Nicole catches it is by seeing what was actually said.
  */
 export function SourceQuote({
   path,
@@ -53,27 +86,43 @@ export function SourceQuote({
   if (!hit) {
     if (!hasValue || evidence.size === 0) return null;
     return (
-      <div className="il-prov il-prov--none" title="The model gave no supporting quote for this field.">
-        no source quote
+      <div className="il-prov il-prov--none" title="The model gave no source for this field.">
+        no source
       </div>
     );
   }
 
-  const cls = hit.unverified ? 'il-prov il-prov--unverified' : 'il-prov';
+  const note = NOTE[hit.verification ?? ''] ?? {
+    label: hit.unverified ? 'not found in transcript' : null,
+    title: 'Jump to this moment in the transcript',
+  };
+  // Prefer the transcript's own words. The model's quote is the fallback for
+  // notes extracted before citations existed.
+  const shown = hit.turn_text?.trim() || hit.quote;
+  const reworded = hit.verification === 'span_near' && hit.turn_text;
+
+  const cls = [
+    'il-prov',
+    hit.unverified ? 'il-prov--unverified' : '',
+    reworded ? 'il-prov--reworded' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
     <button
       type="button"
       className={cls}
-      onClick={() => onSeek?.(hit.at_seconds, hit.quote)}
-      title={
-        hit.unverified
-          ? 'These words were not found in the transcript — verify before approving.'
-          : 'Jump to this moment in the transcript'
-      }
+      onClick={() => onSeek?.(hit.at_seconds, hit.turn_text?.trim() || hit.quote)}
+      title={note.title}
     >
       {hit.at_seconds != null && <span className="il-prov__at">{stamp(hit.at_seconds)}</span>}
-      <span className="il-prov__quote">“{hit.quote}”</span>
-      {hit.unverified && <span className="il-prov__flag">not found in transcript</span>}
+      {hit.turn != null && <span className="il-prov__turn">#{hit.turn}</span>}
+      <span className="il-prov__quote">“{shown}”</span>
+      {note.label && <span className="il-prov__flag">{note.label}</span>}
+      {reworded && (
+        <span className="il-prov__model-quote">model wrote: “{hit.quote}”</span>
+      )}
     </button>
   );
 }
@@ -91,11 +140,21 @@ export function ExtractionBanner({
   meta?: ExtractionMeta;
   evidence: EvidenceIndex;
 }) {
-  const unverified = [...evidence.values()].filter((e) => e.unverified);
+  const all = [...evidence.values()];
+  const unverified = all.filter((e) => e.unverified);
+  // A citation that points somewhere real and wrong is a stronger fabrication
+  // signal than a quote that merely failed to match, so it gets counted apart.
+  const miscited = unverified.filter(
+    (e) => e.verification === 'misattributed' || e.verification === 'bad_span',
+  );
+  const reworded = all.filter((e) => e.verification === 'span_near');
   const partial = meta?.partial ?? [];
   const conflicts = meta?.conflicts ?? [];
   const gaps = meta?.gaps ?? [];
-  if (!partial.length && !conflicts.length && !gaps.length && !unverified.length) return null;
+  if (
+    !partial.length && !conflicts.length && !gaps.length && !unverified.length && !reworded.length
+  )
+    return null;
 
   return (
     <div className="il-extract-banner">
@@ -132,8 +191,27 @@ export function ExtractionBanner({
       )}
       {unverified.length > 0 && (
         <div className="il-extract-banner__row il-extract-banner__row--danger">
-          <strong>{unverified.length} quote{unverified.length === 1 ? '' : 's'} not found in the
-          transcript.</strong> Those fields may have been invented — they are marked below.
+          <strong>
+            {unverified.length} finding{unverified.length === 1 ? '' : 's'} the transcript does
+            not back.
+          </strong>{' '}
+          {miscited.length > 0 && (
+            <>
+              {miscited.length} of them point at a specific part of the session that does not say
+              it.{' '}
+            </>
+          )}
+          Those fields may have been invented — they are marked below.
+        </div>
+      )}
+      {reworded.length > 0 && (
+        <div className="il-extract-banner__row il-extract-banner__row--warn">
+          <strong>
+            {reworded.length} finding{reworded.length === 1 ? '' : 's'} reworded rather than
+            quoted.
+          </strong>{' '}
+          The right part of the session is cited, but the wording is the model’s. Read the
+          transcript line — a reversed meaning ("not high" for "high") looks like this.
         </div>
       )}
     </div>

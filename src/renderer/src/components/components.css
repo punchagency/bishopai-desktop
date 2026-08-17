@@ -2099,6 +2099,9 @@
 .il-prov {
   display: flex;
   align-items: baseline;
+  /* The reworded state adds a second line (what the model wrote against what was
+     said), so the row has to be able to wrap. */
+  flex-wrap: wrap;
   gap: 0.4rem;
   width: 100%;
   margin-top: 0.25rem;
@@ -2115,7 +2118,16 @@
 }
 .il-prov:hover { background: var(--il-color-surface-sunken, rgba(0, 0, 0, 0.03)); }
 .il-prov__at { flex: none; font-variant-numeric: tabular-nums; opacity: 0.7; }
-.il-prov__quote { font-style: italic; }
+/* The practitioner's actual words, and the thing Nicole is really reading on
+   this row — the timestamp, turn number and status label around it are chrome.
+   Set a size rather than inheriting the row's 0.75rem so the transcript text
+   stays legible at a glance; 0.875rem lands on a whole 14px at a 16px root,
+   which renders more crisply than a fractional value. */
+.il-prov__quote {
+  font-style: italic;
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
 .il-prov--unverified {
   border-left-color: var(--il-color-danger, #b3261e);
   color: var(--il-color-danger, #b3261e);
@@ -2128,6 +2140,26 @@
   text-transform: uppercase;
   font-size: 0.65rem;
   letter-spacing: 0.03em;
+}
+/* The turn this finding was read from. A number Nicole can find in the
+   transcript pane, which is what makes a citation checkable by eye. */
+.il-prov__turn {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.55;
+  font-size: 0.7rem;
+}
+/* Right turn, model's wording. Not an error — but the one state where the words
+   shown are not the practitioner's, so it reads as caution, not danger. */
+.il-prov--reworded {
+  border-left-color: var(--il-color-warning, #a86400);
+  color: var(--il-color-warning, #a86400);
+}
+.il-prov__model-quote {
+  flex-basis: 100%;
+  margin-left: 0.4rem;
+  font-style: italic;
+  opacity: 0.8;
 }
 .il-prov--none {
   border-left-style: dashed;
@@ -2202,7 +2234,11 @@
 .il-transcript__bar { padding: 0.5rem; border-bottom: 1px solid var(--il-color-border); }
 .il-transcript__search { width: 100%; font-size: 0.8rem; }
 .il-transcript__body { overflow-y: auto; padding: 0.5rem 0.7rem; }
-.il-transcript__line { margin: 0 0 0.35rem; font-size: 0.78rem; line-height: 1.55; white-space: pre-wrap; }
+/* Matches .il-prov__quote (14px). This pane is the longest continuous reading in
+   the app — checking a finding means scanning the session around it — so it
+   should not be the smallest text on screen. The 1.55 leading stays: it is doing
+   more work at this size, not less. */
+.il-transcript__line { margin: 0 0 0.4rem; font-size: 0.875rem; line-height: 1.55; white-space: pre-wrap; }
 .il-transcript__line--hit {
   background: var(--il-color-accent-soft, rgba(200, 120, 80, 0.16));
   border-radius: 2px;
