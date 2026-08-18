@@ -303,13 +303,35 @@ export interface NoteRevision {
   created_at: string;
 }
 
-/** Superseded versions of a note, newest first. */
-export function fetchRevisions(
+/**
+ * The `reason` the server stores on a draft snapshot.
+ *
+ * Duplicated from the server's DRAFT_REPLACED_REASON, which is where it is
+ * written and where it is normally filtered. It is repeated here because this
+ * app talks to a deployed backend it does not ship with: the server-side filter
+ * only takes effect on release, and until then — and against any older build —
+ * these rows arrive anyway. Two copies of one string is the cost of not making
+ * the reviewer wait for a deploy to stop being told a draft was amended.
+ */
+const DRAFT_REPLACED_REASON = 're-extraction — draft replaced by a fresh run';
+
+/**
+ * Superseded versions of an APPROVED note, newest first.
+ *
+ * Drafts that re-extraction replaced are dropped: they are the re-extract
+ * button's undo buffer, they only occur while the extraction pipeline is being
+ * tested, and listing them told the reviewer a draft had been "amended" three
+ * times when it had merely been re-run.
+ */
+export async function fetchRevisions(
   backendUrl: string,
   kind: ReviewKind,
   id: string,
 ): Promise<{ revisions: NoteRevision[] }> {
-  return json<{ revisions: NoteRevision[] }>(`${backendUrl}/review/${kind}/${id}/revisions`);
+  const r = await json<{ revisions: NoteRevision[] }>(
+    `${backendUrl}/review/${kind}/${id}/revisions`,
+  );
+  return { revisions: (r.revisions ?? []).filter((v) => v.reason !== DRAFT_REPLACED_REASON) };
 }
 
 /** Approve the document (writes to the backend approvals audit table). */

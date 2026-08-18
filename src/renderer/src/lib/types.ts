@@ -278,7 +278,23 @@ export interface ReviewContext {
   };
   /** The recording this note was extracted from, so every field can be checked
    *  against what was actually said. */
-  transcript?: { text: string; recorded_at: string | null } | null;
+  transcript?: {
+    text: string;
+    recorded_at: string | null;
+    /** The session split into the SAME numbered turns the citations point at,
+     *  parsed server-side. Empty on an unparseable transcript, in which case the
+     *  pane falls back to plain lines of `text`. */
+    turns?: TranscriptTurn[];
+  } | null;
+}
+
+/** One turn of the recording, as the review pane reads it. */
+export interface TranscriptTurn {
+  index: number;
+  role: 'PRACTITIONER' | 'CLIENT' | 'UNKNOWN';
+  speaker: string;
+  at_seconds: number | null;
+  text: string;
 }
 
 export interface UnmatchedConversation {

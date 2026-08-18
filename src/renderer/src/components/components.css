@@ -2089,84 +2089,143 @@
 
 
 /* ---------------------------------------------------------------------------
-   Provenance — the practitioner's own words beside each extracted field.
+   Provenance — the practitioner's own words behind each extracted field.
    Review used to show ~50 findings with no reference to the transcript at all,
-   so confirming a clinical value meant recalling the session. These styles make
-   the three states legible at a glance: quoted and verified (quiet), quoted but
-   NOT found in the transcript (loud — possibly fabricated), and not quoted at
-   all (a finding the model would not point at).
+   so confirming a clinical value meant recalling the session. Then it showed
+   every one of them in full, which is the honest version and the unreadable
+   one: a turn runs past a hundred words in the real sessions, and fifty of
+   those stacked down the form buries the values being reviewed inside a
+   transcript. So the field carries a MARKER and the words arrive on hover.
+   What never moves into the hover is the status — the reader who does not hover
+   is the reader who approves a fabricated finding.
    --------------------------------------------------------------------------- */
 .il-prov {
-  display: flex;
+  display: inline-flex;
   align-items: baseline;
-  /* The reworded state adds a second line (what the model wrote against what was
-     said), so the row has to be able to wrap. */
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  width: 100%;
-  margin-top: 0.25rem;
-  padding: 0.2rem 0.4rem;
+  gap: 0.3rem;
+  margin-top: 0.2rem;
+  padding: 0.05rem 0.3rem;
   border: 0;
-  border-left: 2px solid var(--il-color-border);
-  border-radius: 2px;
+  border-radius: 3px;
   background: transparent;
-  font-size: 0.75rem;
-  line-height: 1.4;
+  font-size: 0.68rem;
+  line-height: 1.5;
   color: var(--il-color-text-subtle);
   text-align: left;
   cursor: pointer;
 }
-.il-prov:hover { background: var(--il-color-surface-sunken, rgba(0, 0, 0, 0.03)); }
-.il-prov__at { flex: none; font-variant-numeric: tabular-nums; opacity: 0.7; }
-/* The practitioner's actual words, and the thing Nicole is really reading on
-   this row — the timestamp, turn number and status label around it are chrome.
-   Set a size rather than inheriting the row's 0.75rem so the transcript text
-   stays legible at a glance; 0.875rem lands on a whole 14px at a 16px root,
-   which renders more crisply than a fractional value. */
-.il-prov__quote {
-  font-style: italic;
-  font-size: 0.875rem;
-  line-height: 1.45;
-}
-.il-prov--unverified {
-  border-left-color: var(--il-color-danger, #b3261e);
-  color: var(--il-color-danger, #b3261e);
-}
-.il-prov__flag {
+.il-prov:hover { background: var(--il-color-surface-sunken, rgba(0, 0, 0, 0.05)); }
+.il-prov:focus-visible { outline: 2px solid var(--il-color-accent, #c87850); outline-offset: 1px; }
+/* Verified provenance at rest. A dot rather than a word: with everything in
+   order there is nothing to read here, only something not to worry about. */
+.il-prov__dot {
+  align-self: center;
   flex: none;
-  margin-left: auto;
-  font-style: normal;
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 50%;
+  background: var(--il-color-accent, #c87850);
+  opacity: 0.55;
+}
+.il-prov__at { font-variant-numeric: tabular-nums; opacity: 0.75; }
+/* The turn this finding was read from — the number the pane heads each turn
+   with. The pair is what makes a citation checkable by eye rather than on
+   trust. */
+.il-prov__turn { font-variant-numeric: tabular-nums; opacity: 0.6; }
+/* Never deferred to hover. See the note at the top of this section. */
+.il-prov__flag {
   font-weight: 600;
   text-transform: uppercase;
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   letter-spacing: 0.03em;
 }
-/* The turn this finding was read from. A number Nicole can find in the
-   transcript pane, which is what makes a citation checkable by eye. */
-.il-prov__turn {
-  flex: none;
-  font-variant-numeric: tabular-nums;
-  opacity: 0.55;
-  font-size: 0.7rem;
+.il-prov--unverified {
+  background: var(--il-color-danger-soft, rgba(179, 38, 30, 0.09));
+  color: var(--il-color-danger, #b3261e);
 }
+.il-prov--unverified .il-prov__dot { background: var(--il-color-danger, #b3261e); opacity: 1; }
 /* Right turn, model's wording. Not an error — but the one state where the words
-   shown are not the practitioner's, so it reads as caution, not danger. */
+   behind the field are not the practitioner's, so it reads as caution. */
 .il-prov--reworded {
-  border-left-color: var(--il-color-warning, #a86400);
+  background: var(--il-color-warning-soft, rgba(180, 120, 20, 0.1));
   color: var(--il-color-warning, #a86400);
 }
-.il-prov__model-quote {
-  flex-basis: 100%;
-  margin-left: 0.4rem;
-  font-style: italic;
-  opacity: 0.8;
-}
+.il-prov--reworded .il-prov__dot { background: var(--il-color-warning, #a86400); opacity: 1; }
 .il-prov--none {
-  border-left-style: dashed;
   color: var(--il-color-text-subtle);
-  opacity: 0.75;
+  opacity: 0.7;
   cursor: default;
   font-style: italic;
+}
+
+/* The words, on hover.
+   Portalled to <body>, so neither the scrolling form nor the pane beside it can
+   clip it. A source quote cut off by an overflow rule is worse than one never
+   shown: it looks like the transcript stops there. */
+.il-provpop {
+  position: fixed;
+  z-index: 9990;
+  width: max-content;
+  max-width: min(34rem, 90vw);
+  max-height: 50vh;
+  overflow-y: auto;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--il-color-border);
+  border-left: 3px solid var(--il-color-accent, #c87850);
+  border-radius: 5px;
+  background: var(--il-color-surface, #fff);
+  box-shadow: var(--shadow-md, 0 6px 20px rgba(0, 0, 0, 0.14));
+  animation: il-fade-in 90ms ease-out;
+}
+.il-provpop--unverified { border-left-color: var(--il-color-danger, #b3261e); }
+.il-provpop--reworded { border-left-color: var(--il-color-warning, #a86400); }
+.il-provpop__head {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.3rem;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-variant-numeric: tabular-nums;
+  color: var(--il-color-text-subtle);
+}
+.il-provpop__flag { margin-left: auto; font-weight: 700; }
+.il-provpop--unverified .il-provpop__flag { color: var(--il-color-danger, #b3261e); }
+.il-provpop--reworded .il-provpop__flag { color: var(--il-color-warning, #a86400); }
+/* The turn, whole. There is room here, and the sentence around a finding is
+   often what decides it. */
+.il-provpop__quote {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--il-color-text, #1a1a1a);
+}
+.il-provpop__hit {
+  background: var(--il-color-accent-soft, rgba(200, 120, 80, 0.28));
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 0.1em;
+  font-weight: 500;
+}
+/* Anchored, not quoted — the model reworded the turn, so these words are only
+   where the finding sits, not what was said about it. */
+.il-provpop__hit--near {
+  background: transparent;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+  font-weight: 400;
+}
+.il-provpop__model {
+  margin: 0.4rem 0 0;
+  font-size: 0.78rem;
+  font-style: italic;
+  color: var(--il-color-warning, #a86400);
+}
+.il-provpop__note {
+  margin: 0.4rem 0 0;
+  font-size: 0.7rem;
+  line-height: 1.45;
+  color: var(--il-color-text-subtle);
 }
 
 /* "heard 'hold' → stop" — a mapping shown, never assumed. */
@@ -2222,7 +2281,12 @@
   .il-notepane__aside { position: static; }
 }
 
-.il-transcript {
+/* ── The recording, beside the note ───────────────────────────────────────── */
+/* Named .il-srcpane rather than .il-transcript, which the unmatched detail view
+   already owns higher up this file: same class, two components, and the later
+   rule was silently handing the unmatched view a flex column and a 78vh cap it
+   never asked for. The .il-notepane comment above is the same lesson. */
+.il-srcpane {
   display: flex;
   flex-direction: column;
   max-height: 78vh;
@@ -2231,15 +2295,70 @@
   background: var(--il-color-surface, #fff);
   overflow: hidden;
 }
-.il-transcript__bar { padding: 0.5rem; border-bottom: 1px solid var(--il-color-border); }
-.il-transcript__search { width: 100%; font-size: 0.8rem; }
-.il-transcript__body { overflow-y: auto; padding: 0.5rem 0.7rem; }
-/* Matches .il-prov__quote (14px). This pane is the longest continuous reading in
-   the app — checking a finding means scanning the session around it — so it
-   should not be the smallest text on screen. The 1.55 leading stays: it is doing
-   more work at this size, not less. */
-.il-transcript__line { margin: 0 0 0.4rem; font-size: 0.875rem; line-height: 1.55; white-space: pre-wrap; }
-.il-transcript__line--hit {
+.il-srcpane__bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--il-color-border);
+}
+.il-srcpane__search { flex: 1 1 auto; min-width: 0; font-size: 0.8rem; }
+.il-srcpane__count { flex: none; font-size: 0.7rem; color: var(--il-color-text-subtle); }
+.il-srcpane__body { overflow-y: auto; padding: 0.5rem 0.7rem; }
+
+/* One turn — the unit findings are cited against, so the unit the pane renders.
+   14px because this is the longest continuous reading in the app: checking a
+   finding means scanning the session around it. */
+.il-srcpane__turn {
+  margin: 0 0 0.55rem;
+  padding: 0.15rem 0.4rem;
+  border-left: 2px solid transparent;
+  border-radius: 2px;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+/* Number, speaker, time — on their own line, so a long turn reads as prose
+   rather than as text wrapping around a label. */
+.il-srcpane__head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  margin-bottom: 0.1rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.02em;
+  color: var(--il-color-text-subtle);
+}
+.il-srcpane__num { font-variant-numeric: tabular-nums; font-weight: 600; opacity: 0.7; }
+.il-srcpane__role { text-transform: uppercase; font-weight: 600; }
+.il-srcpane__at { font-variant-numeric: tabular-nums; opacity: 0.6; margin-left: auto; }
+/* Who is speaking decides where a sentence lands — a client's report is a
+   concern, the practitioner's is an assessment — so the split is visible while
+   reading rather than on inspection. */
+.il-srcpane__turn--practitioner { border-left-color: var(--il-color-accent-soft, rgba(200, 120, 80, 0.45)); }
+.il-srcpane__turn--client { border-left-color: var(--il-color-border); }
+.il-srcpane__turn--unknown { border-left-style: dashed; border-left-color: var(--il-color-border); }
+.il-srcpane__turn--unknown .il-srcpane__role { font-style: italic; opacity: 0.8; }
+/* The turn a finding was clicked through to. The block is tinted and the
+   supporting words inside it are marked, so the eye lands twice: on the turn,
+   then on the sentence. */
+.il-srcpane__turn--active {
+  background: var(--il-color-surface-sunken, rgba(0, 0, 0, 0.04));
+  border-left-color: var(--il-color-accent, #c87850);
+}
+.il-srcpane__mark {
+  background: var(--il-color-accent-soft, rgba(200, 120, 80, 0.28));
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 0.1em;
+  font-weight: 500;
+}
+/* A search hit is weaker evidence than a citation and must not compete with it. */
+.il-srcpane__turn--hit { background: var(--il-color-surface-sunken, rgba(0, 0, 0, 0.03)); }
+
+/* Fallback for a recording the parser could not split into turns. */
+.il-srcpane__line { margin: 0 0 0.4rem; font-size: 0.875rem; line-height: 1.55; white-space: pre-wrap; }
+.il-srcpane__line--hit {
   background: var(--il-color-accent-soft, rgba(200, 120, 80, 0.16));
   border-radius: 2px;
   font-weight: 500;

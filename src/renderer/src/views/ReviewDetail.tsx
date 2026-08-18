@@ -19,6 +19,7 @@ import { formatDate } from '../lib/format';
 import type { PriorNote, ReviewContext, ReviewKind, SessionNote } from '../lib/types';
 import { NoteEditor } from './NoteEditor';
 import { TranscriptPane } from '../components/Provenance';
+import type { SeekTarget } from '../components/Provenance';
 import { FlowSheetPanel } from './FlowSheetPanel';
 import { SupplementProtocolPanel } from './SupplementProtocolPanel';
 import { SessionHistoryPanel } from './SessionHistoryPanel';
@@ -39,8 +40,9 @@ type Tab = 'preview' | 'edit' | 'flowsheet' | 'history' | 'supplement';
 export function ReviewDetail({ backendUrl, kind, id, clientName, onClose, onChanged }: Props) {
   const [tab, setTab] = useState<Tab>('preview');
   const [note, setNote] = useState<SessionNote | null>(null);
-  // The quote whose moment the transcript pane is scrolled to.
-  const [quote, setQuote] = useState<string | null>(null);
+  // The finding the transcript pane is scrolled to — the cited turn, plus the
+  // quote to mark inside it.
+  const [seek, setSeek] = useState<SeekTarget | null>(null);
   const [markdown, setMarkdown] = useState<string>('');
   const [context, setContext] = useState<ReviewContext | null>(null);
   const [busy, setBusy] = useState(false);
@@ -297,6 +299,10 @@ export function ReviewDetail({ backendUrl, kind, id, clientName, onClose, onChan
         {isSample && <Badge tone="warning">offline sample</Badge>}
       </div>
 
+      {/* An amendment changed a record Nicole had already approved and sent out.
+          Each one carries a reason she typed, so each is worth its own line. The
+          drafts that re-extraction replaced never arrive here — the server keeps
+          them out, since they are a testing artifact rather than history. */}
       {revisions.length > 0 && (
         <div className="il-amends">
           <span className="il-amends__title">
@@ -324,7 +330,7 @@ export function ReviewDetail({ backendUrl, kind, id, clientName, onClose, onChan
                   note={note}
                   prior={context?.prior.sheet ?? context?.prior.protocol ?? null}
                   onChange={setNote}
-                  onSeek={(_, quote) => setQuote(quote)}
+                  onSeek={setSeek}
                 />
               </div>
               {/* The source, beside the fields extracted from it. Confirming a
@@ -332,7 +338,11 @@ export function ReviewDetail({ backendUrl, kind, id, clientName, onClose, onChan
                   glance; recalling the session from memory is not. */}
               {context?.transcript && (
                 <aside className="il-notepane__aside">
-                  <TranscriptPane text={context.transcript.text} highlight={quote} />
+                  <TranscriptPane
+                    text={context.transcript.text}
+                    turns={context.transcript.turns}
+                    target={seek}
+                  />
                 </aside>
               )}
             </div>

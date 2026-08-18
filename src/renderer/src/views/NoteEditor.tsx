@@ -1,5 +1,6 @@
 import type { Lifestyle, NrtFindings, PriorNote, ProtocolChange, SessionNote, Supplement } from '../lib/types';
 import { ExtractionBanner, MappedValueNote, SourceQuote, useEvidence } from '../components/Provenance';
+import type { SeekTarget } from '../components/Provenance';
 import { formatDate } from '../lib/format';
 import { Button } from '../components/Button';
 import {
@@ -38,8 +39,8 @@ export function NoteEditor({
    *  session elsewhere; the comparison belongs where the typing happens. */
   prior?: PriorNote | null;
   onChange: (n: SessionNote) => void;
-  /** Jump the transcript pane to the words behind a field. */
-  onSeek?: (seconds: number | null, quote: string) => void;
+  /** Jump the transcript pane to the turn behind a field. */
+  onSeek?: (target: SeekTarget) => void;
 }) {
   const concerns = note?.concerns || [];
   const assessments = note?.assessments || [];

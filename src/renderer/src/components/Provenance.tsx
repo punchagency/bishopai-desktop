@@ -1,5 +1,7 @@
-import { useMemo, useState } from 'react';
-import type { Evidence, ExtractionMeta, SessionNote } from '../lib/types';
+import { forwardRef, useEffect, useMemo, useRef, useState } from 'react';
+import type { Evidence, ExtractionMeta, SessionNote, TranscriptTurn } from '../lib/types';
+import { createPortal } from 'react-dom';
+import { locate } from '../lib/locateQuote';
 
 // Provenance in the review pane.
 //
@@ -85,14 +87,26 @@ const NOTE: Record<string, { label: string | null; title: string }> = {
   },
 };
 
+/** What the review pane should scroll to and mark. */
+export interface SeekTarget {
+  turn: number | null;
+  quote: string;
+  at_seconds: number | null;
+}
+
 /**
- * The source line under a field.
+ * The source under a field: a marker, with the words on hover.
  *
- * What it shows is the TRANSCRIPT's words wherever they are known, not the
- * model's rendering of them. That distinction is the whole point of citing a
- * turn: a model that reworded "high cholesterol, but I'm not on anything" into
- * "cholesterol is not high" produces a quote that reads as a clean finding, and
- * the only way Nicole catches it is by seeing what was actually said.
+ * Printing every quote inline was the honest version and the unreadable one. A
+ * turn runs past a hundred words in the real sessions — 117, 277 and 435 in the
+ * three on file — and this form has around fifty fields, so provenance rendered
+ * in full turns the editor into a transcript with inputs lost inside it. The
+ * words are wanted for one field at a time, which is exactly what hover is for.
+ *
+ * What does NOT move into the tooltip is the STATUS. A finding the transcript
+ * does not back has to be visible to someone who never hovers, because that is
+ * the person who approves it — so the marker itself carries the flag, and only
+ * the reading matter is deferred.
  */
 export function SourceQuote({
   path,
@@ -103,17 +117,35 @@ export function SourceQuote({
 }: {
   path: string;
   evidence: EvidenceIndex;
-  onSeek?: (seconds: number | null, quote: string) => void;
+  onSeek?: (target: SeekTarget) => void;
   hasValue?: boolean;
 }) {
   const hit = evidence.get(path);
+  const ref = useRef<HTMLButtonElement>(null);
+  const [open, setOpen] = useState(false);
+  // The card sits below the marker with a gap, so a straight mouseleave would
+  // close it the moment the pointer set off towards it. A long turn has to stay
+  // reachable to be read.
+  const closing = useRef<number | undefined>(undefined);
+  const show = () => {
+    window.clearTimeout(closing.current);
+    setOpen(true);
+  };
+  const hide = () => {
+    window.clearTimeout(closing.current);
+    closing.current = window.setTimeout(() => setOpen(false), 140);
+  };
+  useEffect(() => () => window.clearTimeout(closing.current), []);
 
   if (!hit) {
     if (!hasValue || evidence.size === 0) return null;
     return (
-      <div className="il-prov il-prov--none" title="The model gave no source for this field.">
+      <span
+        className="il-prov il-prov--none"
+        title="The model gave no source for this field."
+      >
         no source
-      </div>
+      </span>
     );
   }
 
@@ -123,8 +155,8 @@ export function SourceQuote({
   };
   // Prefer the transcript's own words. The model's quote is the fallback for
   // notes extracted before citations existed.
-  const shown = hit.turn_text?.trim() || hit.quote;
-  const reworded = hit.verification === 'span_near' && hit.turn_text;
+  const source = hit.turn_text?.trim() || hit.quote;
+  const reworded = hit.verification === 'span_near' && !!hit.turn_text;
 
   const cls = [
     'il-prov',
@@ -135,20 +167,151 @@ export function SourceQuote({
     .join(' ');
 
   return (
-    <button
-      type="button"
-      className={cls}
-      onClick={() => onSeek?.(hit.at_seconds, hit.turn_text?.trim() || hit.quote)}
-      title={note.title}
-    >
-      {hit.at_seconds != null && <span className="il-prov__at">{stamp(hit.at_seconds)}</span>}
-      {hit.turn != null && <span className="il-prov__turn">#{hit.turn}</span>}
-      <span className="il-prov__quote">“{shown}”</span>
-      {note.label && <span className="il-prov__flag">{note.label}</span>}
-      {reworded && (
-        <span className="il-prov__model-quote">model wrote: “{hit.quote}”</span>
+    <>
+      <button
+        ref={ref}
+        type="button"
+        className={cls}
+        onMouseEnter={show}
+        onMouseLeave={hide}
+        onFocus={show}
+        onBlur={hide}
+        onClick={() =>
+          onSeek?.({ turn: hit.turn ?? null, quote: hit.quote, at_seconds: hit.at_seconds })
+        }
+        aria-label={`Source: ${source}`}
+      >
+        <span className="il-prov__dot" aria-hidden />
+        {hit.at_seconds != null && <span className="il-prov__at">{stamp(hit.at_seconds)}</span>}
+        {hit.turn != null && <span className="il-prov__turn">#{hit.turn}</span>}
+        {/* A recorder that emits no timestamps and a note extracted before turn
+            citations existed leave nothing to print — and a bare 7px dot is not
+            a thing anyone discovers they can hover. */}
+        {hit.at_seconds == null && hit.turn == null && !note.label && (
+          <span className="il-prov__turn">source</span>
+        )}
+        {/* A flag is never deferred to hover — see the note above. */}
+        {note.label && <span className="il-prov__flag">{note.label}</span>}
+      </button>
+      {open && (
+        <SourcePopover
+          anchor={ref.current}
+          status={note}
+          source={source}
+          hit={hit}
+          reworded={reworded}
+          onEnter={show}
+          onLeave={hide}
+        />
       )}
-    </button>
+    </>
+  );
+}
+
+/**
+ * The turn itself, floating beside the marker.
+ *
+ * Rendered into `document.body` rather than beside the field: the form and the
+ * pane beside it both scroll and both clip, and a source quote that gets cut off
+ * by an overflow rule is worse than one that was never shown — it looks like the
+ * transcript stops there.
+ */
+function SourcePopover({
+  anchor,
+  status,
+  source,
+  hit,
+  reworded,
+  onEnter,
+  onLeave,
+}: {
+  anchor: HTMLElement | null;
+  status: { label: string | null; title: string };
+  /** The turn's own words — the whole turn, not a window of it. There is room
+   *  here, and the sentence around a finding is often what decides it. */
+  source: string;
+  hit: Evidence;
+  reworded: boolean;
+  onEnter: () => void;
+  onLeave: () => void;
+}) {
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const clean = useMemo(() => source.replace(/\s+/g, ' ').trim(), [source]);
+  // Where the finding sits inside the turn. Only meaningful when the turn's own
+  // words are known — otherwise the quote IS the text, and marking all of it
+  // says nothing.
+  const at = useMemo(
+    () => (hit.turn_text ? locate(clean, hit.quote) : null),
+    [clean, hit.turn_text, hit.quote],
+  );
+
+  // Measured after paint, so a card that would open past the bottom or the right
+  // edge of the window flips instead of being half off-screen.
+  useEffect(() => {
+    if (!anchor || !cardRef.current) return;
+    const a = anchor.getBoundingClientRect();
+    const c = cardRef.current.getBoundingClientRect();
+    const margin = 8;
+    const left = Math.max(margin, Math.min(a.left, window.innerWidth - c.width - margin));
+    const below = a.bottom + margin;
+    const top = below + c.height > window.innerHeight - margin
+      ? Math.max(margin, a.top - c.height - margin)
+      : below;
+    setPos({ top, left });
+  }, [anchor]);
+
+  const cls = [
+    'il-provpop',
+    hit.unverified ? 'il-provpop--unverified' : '',
+    reworded ? 'il-provpop--reworded' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  return createPortal(
+    <div
+      ref={cardRef}
+      className={cls}
+      role="tooltip"
+      onMouseEnter={onEnter}
+      onMouseLeave={onLeave}
+      style={{
+        top: pos?.top ?? 0,
+        left: pos?.left ?? 0,
+        // Hidden until measured — one frame at the wrong coordinates reads as a
+        // flicker in the corner of the screen.
+        visibility: pos ? 'visible' : 'hidden',
+      }}
+    >
+      <div className="il-provpop__head">
+        {hit.at_seconds != null && <span>{stamp(hit.at_seconds)}</span>}
+        {hit.turn != null && <span>turn #{hit.turn}</span>}
+        {status.label && <span className="il-provpop__flag">{status.label}</span>}
+      </div>
+      <p className="il-provpop__quote">
+        {at ? (
+          <>
+            {clean.slice(0, at.start)}
+            {/* Marked, not quoted: where the model reworded the turn these are
+                the words the two share, not a quotation of the model. */}
+            <mark className={`il-provpop__hit${at.exact ? '' : ' il-provpop__hit--near'}`}>
+              {clean.slice(at.start, at.end)}
+            </mark>
+            {clean.slice(at.end)}
+          </>
+        ) : (
+          clean
+        )}
+      </p>
+      {reworded && (
+        /* Both renderings at once, or the reversal ("not high" for "high") has
+           nothing to be caught against. */
+        <p className="il-provpop__model">model wrote: “{hit.quote}”</p>
+      )}
+      <p className="il-provpop__note">{status.title}</p>
+    </div>,
+    document.body,
   );
 }
 
@@ -244,53 +407,158 @@ export function ExtractionBanner({
 }
 
 /**
- * The transcript beside the note. Speaker-attributed, with the active quote
- * highlighted and scrolled to, so checking a field is a glance rather than a
- * search.
+ * The transcript beside the note.
+ *
+ * Split into the SAME numbered turns the citations point at, because "#133" is
+ * only checkable if #133 is a thing on screen. The previous pane split the file
+ * on newlines and found the active quote by substring search — which silently
+ * found nothing whenever a turn had been merged from several lines, so clicking
+ * a finding appeared to do nothing at all. Scrolling to a turn by its number
+ * cannot miss.
  */
 export function TranscriptPane({
   text,
-  highlight,
+  turns,
+  target,
 }: {
   text: string;
-  highlight: string | null;
+  turns?: TranscriptTurn[];
+  target: SeekTarget | null;
 }) {
   const [query, setQuery] = useState('');
-  const needle = (highlight ?? query).trim().toLowerCase();
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const activeRef = useRef<HTMLParagraphElement>(null);
 
-  const lines = useMemo(() => text.split(/\r?\n/), [text]);
+  const q = query.trim().toLowerCase();
+  const lines = useMemo(() => (turns?.length ? [] : text.split(/\r?\n/)), [text, turns]);
+
+  // Which block is the one to scroll to: the cited turn, else the first search
+  // hit. Falls back to matching on the quote's text for notes extracted before
+  // citations existed.
+  const activeKey = useMemo(() => {
+    if (turns?.length) {
+      if (target?.turn != null && turns.some((t) => t.index === target.turn)) return target.turn;
+      const needle = target?.quote?.trim().toLowerCase();
+      if (needle && needle.length > 2) {
+        const hit = turns.find((t) => t.text.toLowerCase().includes(needle.slice(0, 60)));
+        if (hit) return hit.index;
+      }
+      if (q.length > 2) return turns.find((t) => t.text.toLowerCase().includes(q))?.index ?? null;
+      return null;
+    }
+    const needle = (target?.quote ?? query).trim().toLowerCase();
+    if (needle.length <= 2) return null;
+    return lines.findIndex((l) => l.toLowerCase().includes(needle));
+  }, [turns, target, q, query, lines]);
+
+  // Scroll only when the thing being looked at changes. The old pane scrolled
+  // from a ref callback, so every keystroke in the form re-ran it and yanked the
+  // pane back to whatever was last clicked.
+  useEffect(() => {
+    if (activeKey == null || activeKey < 0) return;
+    activeRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [activeKey]);
+
+  const count = turns?.length
+    ? turns.filter((t) => q.length > 2 && t.text.toLowerCase().includes(q)).length
+    : 0;
 
   return (
-    <div className="il-transcript">
-      <div className="il-transcript__bar">
+    <div className="il-srcpane">
+      <div className="il-srcpane__bar">
         <input
-          className="il-input il-transcript__search"
+          className="il-input il-srcpane__search"
           placeholder="Search the transcript…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
+        {q.length > 2 && turns?.length ? (
+          <span className="il-srcpane__count">
+            {count} turn{count === 1 ? '' : 's'}
+          </span>
+        ) : null}
       </div>
-      <div className="il-transcript__body">
-        {lines.map((line, i) => {
-          const isHit = needle.length > 2 && line.toLowerCase().includes(needle);
-          return (
-            <p
-              key={i}
-              ref={
-                isHit
-                  ? (el) => el?.scrollIntoView({ block: 'center', behavior: 'smooth' })
-                  : undefined
-              }
-              className={`il-transcript__line${isHit ? ' il-transcript__line--hit' : ''}`}
-            >
-              {line || ' '}
-            </p>
-          );
-        })}
+      <div className="il-srcpane__body" ref={bodyRef}>
+        {turns?.length
+          ? turns.map((t) => (
+              <TurnBlock
+                key={t.index}
+                turn={t}
+                active={t.index === activeKey}
+                quote={t.index === activeKey ? target?.quote ?? null : null}
+                query={q}
+                ref={t.index === activeKey ? activeRef : undefined}
+              />
+            ))
+          : lines.map((line, i) => (
+              <p
+                key={i}
+                ref={i === activeKey ? activeRef : undefined}
+                className={`il-srcpane__line${i === activeKey ? ' il-srcpane__line--hit' : ''}`}
+              >
+                {line || ' '}
+              </p>
+            ))}
       </div>
     </div>
   );
 }
+
+const ROLE_LABEL: Record<string, string> = {
+  PRACTITIONER: 'Practitioner',
+  CLIENT: 'Client',
+  UNKNOWN: 'Unattributed',
+};
+
+/**
+ * One turn, headed by the number a finding cites it as. The header is what makes
+ * the citation verifiable by eye, and the role is what makes the note's central
+ * distinction — the client's concern against the practitioner's assessment —
+ * checkable rather than assumed.
+ */
+const TurnBlock = forwardRef<
+  HTMLParagraphElement,
+  { turn: TranscriptTurn; active: boolean; quote: string | null; query: string }
+>(function TurnBlock({ turn, active, quote, query }, ref) {
+  const clean = useMemo(() => turn.text.replace(/\s+/g, ' ').trim(), [turn.text]);
+  const hit = !active && query.length > 2 && clean.toLowerCase().includes(query);
+  // The whole turn is shown here — this only says which part of it to mark.
+  const at = active && quote ? locate(clean, quote) : null;
+
+  return (
+    <p
+      ref={ref}
+      id={`il-srcpane-turn-${turn.index}`}
+      className={[
+        'il-srcpane__turn',
+        `il-srcpane__turn--${turn.role.toLowerCase()}`,
+        active ? 'il-srcpane__turn--active' : '',
+        hit ? 'il-srcpane__turn--hit' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      <span className="il-srcpane__head">
+        <span className="il-srcpane__num">#{turn.index}</span>
+        <span className="il-srcpane__role">{ROLE_LABEL[turn.role] ?? turn.speaker}</span>
+        {turn.at_seconds != null && (
+          <span className="il-srcpane__at">{stamp(turn.at_seconds)}</span>
+        )}
+      </span>
+      {/* Marked inside the turn, so arriving here is a glance and not a second
+          search through a hundred words. */}
+      {at ? (
+        <>
+          {clean.slice(0, at.start)}
+          <mark className="il-srcpane__mark">{clean.slice(at.start, at.end)}</mark>
+          {clean.slice(at.end)}
+        </>
+      ) : (
+        clean
+      )}
+    </p>
+  );
+});
 
 /** "model said *hold* → stop" — the mapping shown rather than assumed. */
 export function MappedValueNote({
