@@ -26,6 +26,31 @@ function stamp(seconds: number | null): string {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
+/**
+ * Where a dropped range sits, in whatever units the recording actually has.
+ *
+ * Timestamps first, because minutes are how Nicole scrubs a recording. But the
+ * recorder in use emits none, and the earlier version rendered time alone — so a
+ * real partial extraction announced its gaps as "–, –, –", which is strictly
+ * worse than saying nothing. Turn numbers are ours and always present, and they
+ * match the #133 markers already shown beside every quote.
+ */
+function gapLabel(g: {
+  from: number | null;
+  to: number | null;
+  from_turn?: number | null;
+  to_turn?: number | null;
+  stage?: string | null;
+}): string {
+  const where =
+    g.from != null && g.to != null
+      ? `${stamp(g.from)}–${stamp(g.to)}`
+      : g.from_turn != null && g.to_turn != null
+        ? `turns #${g.from_turn}–#${g.to_turn}`
+        : 'an unlabelled stretch';
+  return g.stage ? `${where} (${g.stage})` : where;
+}
+
 /** What each verification state means where Nicole is reading, not in schema terms. */
 const NOTE: Record<string, { label: string | null; title: string }> = {
   span: {
@@ -171,7 +196,7 @@ export function ExtractionBanner({
           {gaps.map((g, i) => (
             <span key={i}>
               {i > 0 && ', '}
-              {stamp(g.from)}–{stamp(g.to)}
+              {gapLabel(g)}
             </span>
           ))}
         </div>

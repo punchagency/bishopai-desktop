@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { StatCard } from '../components/StatCard';
 import { Feed, type FeedRow } from '../components/Feed';
 import { Badge } from '../components/Badge';
-import { Skeleton } from '../components/Skeleton';
+import { Skeleton, SkeletonView } from '../components/Skeleton';
 import { fetchOverview, fetchTasks, fetchUpcomingReminders, setReminderCancelled, updateTask } from '../lib/api';
+import { ConnectionError } from '../components/ConnectionError';
+import { allowSampleData } from '../lib/preview';
 import type {
   PocketStatus,
   Overview as OverviewData,
@@ -31,6 +33,9 @@ interface Props {
 export function Overview({ backendUrl, pocket, onNavigate }: Props) {
   const [data, setData] = useState<OverviewData | null>(null);
   const [offline, setOffline] = useState(false);
+  // Set when the fetch failed and we are NOT allowed to show samples (any
+  // non-local backend). Distinct from `offline`, which means "showing samples".
+  const [unreachable, setUnreachable] = useState<string | null>(null);
 
   useEffect(() => {
     const ctrl = new AbortController();
@@ -39,14 +44,26 @@ export function Overview({ backendUrl, pocket, onNavigate }: Props) {
         setData(d);
         setOffline(false);
       })
-      .catch(() => {
-        setData(SAMPLE);
-        setOffline(true);
+      .catch((err: Error) => {
+        if (ctrl.signal.aborted) return;
+        if (allowSampleData(backendUrl)) {
+          setData(SAMPLE);
+          setOffline(true);
+        } else {
+          setUnreachable(err.message);
+        }
       });
     return () => ctrl.abort();
   }, [backendUrl]);
 
-  const d = data ?? SAMPLE;
+  // Never paint SAMPLE while the first fetch is in flight. `data` is set on
+  // success AND on failure (failure substitutes SAMPLE and raises `offline`),
+  // so a null here means "still loading" and nothing else. Rendering the
+  // sample in that window showed Nicole invented clients with no offline
+  // badge to mark them — indistinguishable from her real queue.
+  if (unreachable) return <ConnectionError backendUrl={backendUrl} detail={unreachable} onRetry={() => location.reload()} />;
+  if (!data) return <SkeletonView stats={4} twoCol />;
+  const d = data;
   const n = (v: number | string) => Number(v) || 0;
 
   const activityRows: FeedRow[] = d.recent_activity.map((a, i) => ({

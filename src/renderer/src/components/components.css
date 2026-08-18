@@ -3162,3 +3162,13 @@
   color: var(--text);
 }
 
+
+/* ConnectionError — the backend URL under the message. Small and quiet: it's
+   diagnostic detail for a support conversation, not something Nicole needs. */
+.il-conn__meta {
+  display: inline-block;
+  margin-top: 0.6rem;
+  font-size: 0.75rem;
+  opacity: 0.6;
+  word-break: break-all;
+}

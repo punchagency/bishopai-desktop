@@ -6,6 +6,8 @@ import { EmptyState } from '../components/EmptyState';
 import { InfoPopover } from '../components/InfoPopover';
 import { Badge } from '../components/Badge';
 import type { AuditEvent } from '../lib/types';
+import { ConnectionError } from '../components/ConnectionError';
+import { allowSampleData } from '../lib/preview';
 
 // A category groups related entity types into a filter chip. The value is what
 // the API's ?type= expects; 'all' clears the filter.
@@ -37,6 +39,7 @@ const SAMPLE: AuditEvent[] = [
 export function ActivityView({ backendUrl }: { backendUrl: string }) {
   const [events, setEvents] = useState<AuditEvent[] | null>(null);
   const [offline, setOffline] = useState(false);
+  const [unreachable, setUnreachable] = useState<string | null>(null);
   const [category, setCategory] = useState('all');
 
   const load = useCallback(
@@ -46,9 +49,14 @@ export function ActivityView({ backendUrl }: { backendUrl: string }) {
           setEvents(d.events);
           setOffline(false);
         })
-        .catch(() => {
-          setEvents(SAMPLE);
-          setOffline(true);
+        .catch((err: Error) => {
+          if (signal?.aborted) return;
+          if (allowSampleData(backendUrl)) {
+            setEvents(SAMPLE);
+            setOffline(true);
+          } else {
+            setUnreachable(err.message);
+          }
         }),
     [backendUrl, category],
   );
@@ -64,6 +72,7 @@ export function ActivityView({ backendUrl }: { backendUrl: string }) {
     };
   }, [load]);
 
+  if (unreachable) return <ConnectionError backendUrl={backendUrl} detail={unreachable} onRetry={() => load()} />;
   if (!events) return <SkeletonView cards={8} />;
 
   return (

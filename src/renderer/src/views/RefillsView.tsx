@@ -8,6 +8,8 @@ import { fetchRefillDigest, sendRefillOrders, skipRefill, snoozeRefill } from '.
 import { SkeletonView } from '../components/Skeleton';
 import { EmptyState } from '../components/EmptyState';
 import type { RefillDigest, RefillItem, RefillTier, RefillSendResponse } from '../lib/types';
+import { ConnectionError } from '../components/ConnectionError';
+import { allowSampleData } from '../lib/preview';
 
 // WF4: refill reminders timed off each supplement's run-out (projected nightly
 // from dose × qty × start date). Nicole's daily digest — snooze, skip, or
@@ -38,6 +40,8 @@ const TONE: Record<RefillTier, 'warning' | 'accent' | 'neutral'> = {
 export function RefillsView({ backendUrl, onChanged }: { backendUrl: string; onChanged?: () => void }) {
   const [digest, setDigest] = useState<RefillDigest | null>(null);
   const [offline, setOffline] = useState(false);
+  // Fetch failed and samples are not allowed here (any non-local backend).
+  const [unreachable, setUnreachable] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState<string | null>(null); // refill id being actioned
   const [sending, setSending] = useState(false);
@@ -51,9 +55,14 @@ export function RefillsView({ backendUrl, onChanged }: { backendUrl: string; onC
           setDigest(d);
           setOffline(false);
         })
-        .catch(() => {
-          setDigest(SAMPLE);
-          setOffline(true);
+        .catch((err: Error) => {
+          if (signal?.aborted) return;
+          if (allowSampleData(backendUrl)) {
+            setDigest(SAMPLE);
+            setOffline(true);
+          } else {
+            setUnreachable(err.message);
+          }
         })
         .finally(() => setLoading(false));
     },
@@ -102,6 +111,7 @@ export function RefillsView({ backendUrl, onChanged }: { backendUrl: string; onC
     send(d.refills.filter((r) => r.tier !== 'coming' && r.status === 'pending').map((r) => r.id));
   };
 
+  if (unreachable) return <ConnectionError backendUrl={backendUrl} detail={unreachable} onRetry={() => load()} />;
   if (loading && !digest) return <SkeletonView cards={6} />;
 
   const d = digest ?? SAMPLE;

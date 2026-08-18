@@ -24,6 +24,8 @@ import { EmptyState } from '../components/EmptyState';
 import { InfoPopover } from '../components/InfoPopover';
 import { SearchBar } from '../components/SearchBar';
 import type { EngagementData, EngagementLead, LeadActivityItem, QueueItem, SentEmail } from '../lib/types';
+import { ConnectionError } from '../components/ConnectionError';
+import { allowSampleData } from '../lib/preview';
 
 // WF3: lead re-engagement + site activity. Four tabs:
 //   Leads     — status + inline pending subject; customize upcoming email or view history
@@ -594,6 +596,7 @@ export function EngagementView({ backendUrl, onChanged }: { backendUrl: string; 
   const [sent, setSent] = useState<{ rows: SentEmail[]; total: number } | null>(null);
   const [offline, setOffline] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [unreachable, setUnreachable] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const [query, setQuery] = useState('');
@@ -643,7 +646,12 @@ export function EngagementView({ backendUrl, onChanged }: { backendUrl: string; 
     (signal?: AbortSignal) => {
       setLoading(true);
       return Promise.all([loadLeads(signal), loadQueue(signal), loadSent(signal)])
-        .catch(() => {
+        .catch((err: Error) => {
+          if (signal?.aborted) return;
+          if (!allowSampleData(backendUrl)) {
+            setUnreachable(err.message);
+            return;
+          }
           setData((prev) => prev || SAMPLE);
           setActivity((prev) => prev || SAMPLE_ACTIVITY);
           setQueue((prev) => prev || SAMPLE_QUEUE);
@@ -717,6 +725,7 @@ export function EngagementView({ backendUrl, onChanged }: { backendUrl: string; 
     } catch { /* ignore */ }
   };
 
+  if (unreachable && !data) return <ConnectionError backendUrl={backendUrl} detail={unreachable} onRetry={() => void loadAll()} />;
   if (loading && !data) return <SkeletonView stats={4} cards={4} twoCol />;
 
   const d = data ?? SAMPLE;

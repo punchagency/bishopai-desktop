@@ -2,10 +2,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { Badge } from '../components/Badge';
 import { fetchUnmatched } from '../lib/api';
 import { formatDate } from '../lib/format';
+import { SkeletonView } from '../components/Skeleton';
 import { EmptyState } from '../components/EmptyState';
 import { InfoPopover } from '../components/InfoPopover';
 import type { UnmatchedConversation } from '../lib/types';
 import { UnmatchedDetail } from './UnmatchedDetail';
+import { ConnectionError } from '../components/ConnectionError';
+import { allowSampleData } from '../lib/preview';
 
 const SAMPLE: UnmatchedConversation[] = [
   {
@@ -22,6 +25,7 @@ const SAMPLE: UnmatchedConversation[] = [
 export function UnmatchedView({ backendUrl, onChanged }: { backendUrl: string; onChanged?: () => void }) {
   const [rows, setRows] = useState<UnmatchedConversation[] | null>(null);
   const [offline, setOffline] = useState(false);
+  const [unreachable, setUnreachable] = useState<string | null>(null);
   const [selected, setSelected] = useState<UnmatchedConversation | null>(null);
 
   const load = useCallback(
@@ -36,9 +40,14 @@ export function UnmatchedView({ backendUrl, onChanged }: { backendUrl: string; o
             cur && d.conversations.some((c) => c.id === cur.id) ? cur : null,
           );
         })
-        .catch(() => {
-          setRows(SAMPLE);
-          setOffline(true);
+        .catch((err: Error) => {
+          if (signal?.aborted) return;
+          if (allowSampleData(backendUrl)) {
+            setRows(SAMPLE);
+            setOffline(true);
+          } else {
+            setUnreachable(err.message);
+          }
         }),
     [backendUrl],
   );
@@ -49,7 +58,11 @@ export function UnmatchedView({ backendUrl, onChanged }: { backendUrl: string; o
     return () => ctrl.abort();
   }, [load]);
 
-  const list = rows ?? SAMPLE;
+  // See Overview: SAMPLE is the offline-preview fallback, never the loading
+  // state. `rows` is null only while the first fetch is in flight.
+  if (unreachable) return <ConnectionError backendUrl={backendUrl} detail={unreachable} onRetry={() => load()} />;
+  if (!rows) return <SkeletonView cards={3} />;
+  const list = rows;
 
   return (
     <section className="il-view">

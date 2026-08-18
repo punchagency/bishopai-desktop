@@ -217,8 +217,16 @@ export interface ExtractionMeta {
   partial?: string[];
   /** Field paths where two parts of the transcript disagreed. */
   conflicts?: { path: string; chosen: string | null; candidates: string[] }[];
-  /** Minutes of the session that produced no usable extraction. */
-  gaps?: { from: number | null; to: number | null }[];
+  /** Parts of the session that produced no usable extraction. `from`/`to` are
+   *  seconds and are null on a recorder that emits no timestamps, so the turn
+   *  range is what actually renders most of the time. */
+  gaps?: {
+    from: number | null;
+    to: number | null;
+    from_turn?: number | null;
+    to_turn?: number | null;
+    stage?: string | null;
+  }[];
   attribution_coverage?: number | null;
   chunks?: number | null;
 }

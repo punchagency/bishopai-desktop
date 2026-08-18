@@ -25,7 +25,13 @@ const DEFAULT_BACKEND = 'http://localhost:3000';
 const TOKEN_KEY = 'innerlume.token';
 
 export function App() {
-  const [backendUrl, setBackendUrl] = useState(DEFAULT_BACKEND);
+  // null until main tells us which backend this install talks to. It must NOT
+  // default to localhost: every view fetches on mount, so a non-null seed sent
+  // the whole dashboard at http://localhost:3000 for one round trip. On a build
+  // pointed at the hosted backend that request fails, each view falls back to
+  // its offline SAMPLE, and Nicole watches invented clients (Jane Doe, Maya
+  // Chen, sarah.m@example.com) paint and then vanish when the real URL lands.
+  const [backendUrl, setBackendUrl] = useState<string | null>(null);
   const [pocket, setPocket] = useState<PocketStatus | null>(null);
   const [view, setView] = useState<ViewKey>('overview');
   const [navCollapsed, setNavCollapsed] = useState(
@@ -61,9 +67,15 @@ export function App() {
     else localStorage.removeItem(TOKEN_KEY);
   }, []);
 
-  // Pull app info (which backend to talk to).
+  // Pull app info (which backend to talk to). Outside Electron (or if the IPC
+  // fails) there is no config to read, so fall back to the localhost default —
+  // but only here, once, rather than as the initial state everything renders on.
   useEffect(() => {
-    window.innerlume?.getAppInfo().then((i) => setBackendUrl(i.backendUrl)).catch(() => {});
+    window.innerlume
+      ?.getAppInfo()
+      .then((i) => setBackendUrl(i.backendUrl || DEFAULT_BACKEND))
+      .catch(() => setBackendUrl(DEFAULT_BACKEND));
+    if (!window.innerlume) setBackendUrl(DEFAULT_BACKEND);
   }, []);
 
   // Seed the api token from storage, and when any guarded call 401s (login was
@@ -78,6 +90,7 @@ export function App() {
 
   // Is login required? (Re-checked when the backend changes.)
   useEffect(() => {
+    if (!backendUrl) return;
     fetchAuthStatus(backendUrl)
       .then(setAuthStatus)
       .catch(() => setAuthStatus({ enabled: false, configured: false })); // offline → don't lock out
@@ -85,6 +98,7 @@ export function App() {
 
   // Nav badge counts from the overview endpoint (doubles as a backend-online probe).
   const refreshCounts = useCallback(() => {
+    if (!backendUrl) return;
     const num = (v: number | string | undefined) => Number(v) || 0;
     fetchOverview(backendUrl)
       .then((d) => {
@@ -110,6 +124,7 @@ export function App() {
   // cadence as the counts; a failure leaves it null, which the UI reads as
   // "checking" rather than inventing a problem.
   const refreshPocket = useCallback(() => {
+    if (!backendUrl) return;
     fetchPocketStatus(backendUrl)
       .then(setPocket)
       .catch(() => setPocket(null));
@@ -177,6 +192,11 @@ export function App() {
     setImportFile(null);
     setImportOpen(true);
   }, []);
+
+  // Nothing renders until we know which backend to talk to — see the backendUrl
+  // state above. The splash window is still up during this tick, so this is a
+  // held frame, not a blank one.
+  if (!backendUrl) return <div className="il-app" aria-busy="true" />;
 
   // Gate the whole app behind login when Nicole has it turned on.
   const needsLogin = authStatus?.enabled && !token;

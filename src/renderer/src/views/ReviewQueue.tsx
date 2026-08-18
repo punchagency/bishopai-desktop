@@ -10,6 +10,8 @@ import { InfoPopover } from '../components/InfoPopover';
 import { SearchBar } from '../components/SearchBar';
 import type { ReviewKind, ReviewQueue as Queue, ReviewSession } from '../lib/types';
 import { ReviewDetail } from './ReviewDetail';
+import { ConnectionError } from '../components/ConnectionError';
+import { allowSampleData } from '../lib/preview';
 
 // Sample data so the dashboard renders standalone when the backend isn't up
 // (design preview / offline). Replaced by live data the moment /review/queue
@@ -55,6 +57,8 @@ export function ReviewQueue({
 }) {
   const [queue, setQueue] = useState<Queue | null>(null);
   const [offline, setOffline] = useState(false);
+  // Fetch failed and samples are not allowed here (any non-local backend).
+  const [unreachable, setUnreachable] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Selection | null>(null);
   const [pending, setPending] = useState<string | null>(null); // id being approved inline
@@ -91,9 +95,14 @@ export function ReviewQueue({
             cur && q.sessions.some((sn) => sn.appointment_id === cur.appointmentId) ? cur : null,
           );
         })
-        .catch(() => {
-          setQueue(SAMPLE);
-          setOffline(true);
+        .catch((err: Error) => {
+          if (signal?.aborted) return;
+          if (allowSampleData(backendUrl)) {
+            setQueue(SAMPLE);
+            setOffline(true);
+          } else {
+            setUnreachable(err.message);
+          }
         })
         .finally(() => setLoading(false));
     },
@@ -140,6 +149,7 @@ export function ReviewQueue({
     }
   };
 
+  if (unreachable) return <ConnectionError backendUrl={backendUrl} detail={unreachable} onRetry={() => load()} />;
   if (loading && !queue) return <SkeletonView cards={6} />;
 
   const q = queue ?? SAMPLE;

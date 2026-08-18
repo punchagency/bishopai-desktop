@@ -10,6 +10,8 @@ import { EmptyState } from '../components/EmptyState';
 import { InfoPopover } from '../components/InfoPopover';
 import { HistoryPanel } from '../components/HistoryPanel';
 import type { CheckoutData, CheckoutItem } from '../lib/types';
+import { ConnectionError } from '../components/ConnectionError';
+import { allowSampleData } from '../lib/preview';
 
 // WF2 (§6): the one custom, auditable money flow. Two Nicole actions — approve
 // charge, confirm close — over a unified 5-system view. Charges are dry-run
@@ -67,6 +69,8 @@ const money = (cents: number, ccy = 'USD') =>
 export function CheckoutView({ backendUrl, onChanged }: { backendUrl: string; onChanged?: () => void }) {
   const [data, setData] = useState<CheckoutData | null>(null);
   const [offline, setOffline] = useState(false);
+  // Fetch failed and samples are not allowed here (any non-local backend).
+  const [unreachable, setUnreachable] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState<string | null>(null);
   // Which checkout is entering a card, and the in-progress card fields. Cleared
@@ -88,9 +92,14 @@ export function CheckoutView({ backendUrl, onChanged }: { backendUrl: string; on
           setData(d);
           setOffline(false);
         })
-        .catch(() => {
-          setData(SAMPLE);
-          setOffline(true);
+        .catch((err: Error) => {
+          if (signal?.aborted) return;
+          if (allowSampleData(backendUrl)) {
+            setData(SAMPLE);
+            setOffline(true);
+          } else {
+            setUnreachable(err.message);
+          }
         })
         .finally(() => setLoading(false));
     },
@@ -117,6 +126,7 @@ export function CheckoutView({ backendUrl, onChanged }: { backendUrl: string; on
     }
   };
 
+  if (unreachable) return <ConnectionError backendUrl={backendUrl} detail={unreachable} onRetry={() => load()} />;
   if (loading && !data) return <SkeletonView cards={6} />;
 
   const d = data ?? SAMPLE;

@@ -5,6 +5,7 @@ import { IconMail, IconChevronDown, IconChevronUp } from './Icons';
 import { fetchEmailTemplates, saveEmailTemplate, resetEmailTemplate } from '../lib/api';
 import { humanize } from '../lib/format';
 import type { EmailTemplate } from '../lib/types';
+import { allowSampleData } from '../lib/preview';
 
 // Settings card: Nicole's email template editor.
 // All cadence tracks/steps are shown with their effective copy (DB override or
@@ -286,6 +287,7 @@ export function EmailTemplatesCard({
 }) {
   const [templates, setTemplates] = useState<EmailTemplate[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
   const [open, setOpen] = useState(defaultOpen);
 
   const load = useCallback(
@@ -298,7 +300,10 @@ export function EmailTemplatesCard({
       return fetchEmailTemplates(backendUrl, signal)
         .then((d) => setTemplates(d.templates))
         .catch(() => {
-          setTemplates((prev) => prev || SAMPLE_TEMPLATES);
+          // Against a real backend, template copy she never wrote must not
+          // appear as hers — she can edit and send from this card.
+          if (allowSampleData(backendUrl)) setTemplates((prev) => prev || SAMPLE_TEMPLATES);
+          else setFailed(true);
         })
         .finally(() => setLoading(false));
     },
@@ -332,6 +337,8 @@ export function EmailTemplatesCard({
     <div className={embedded ? 'il-tpl-embedded' : 'il-tpl-card__body'}>
       {loading ? (
         <p className="il-card__meta">Loading templates…</p>
+      ) : failed ? (
+        <p className="il-card__meta">Couldn't load your templates — check your connection and reopen this card.</p>
       ) : !templates || templates.length === 0 ? (
         <p className="il-card__meta">No templates found.</p>
       ) : (
