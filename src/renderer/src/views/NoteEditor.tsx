@@ -1,4 +1,5 @@
-import type { Lifestyle, NrtFindings, PriorNote, ProtocolChange, SessionNote, Supplement } from '../lib/types';
+import type { Lifestyle, NrtFindings, PriorNote, ProtocolChange, SessionNote, Stressor, Supplement } from '../lib/types';
+import { STRESSOR_CATEGORIES } from '../lib/types';
 import { ExtractionBanner, MappedValueNote, SourceQuote, useEvidence } from '../components/Provenance';
 import type { SeekTarget } from '../components/Provenance';
 import { formatDate } from '../lib/format';
@@ -51,11 +52,12 @@ export function NoteEditor({
     pulse0: null,
     priority1: null,
     k27: null,
-    stressors: null,
+    stressors: [],
     foundation: null,
     body_scan: null,
   };
   // Editing a single prompt shouldn't require the whole pass to already exist.
+  const stressors = nrt.stressors ?? [];
   const foundation = nrt.foundation ?? EMPTY_FOUNDATION;
   const bodyScan = nrt.body_scan ?? EMPTY_BODY_SCAN;
   const lifestyle: Lifestyle = note?.lifestyle ?? {
@@ -140,6 +142,92 @@ export function NoteEditor({
             </label>
           ))}
         </div>
+      </Field>
+
+      {/* The stressor is the answer the appointment was working toward, so it is
+          edited as findings rather than as a sentence: one row each, with the
+          SOURCE in its own box. A blank source is a real reading — the
+          practitioner named the category and said it was nothing more specific —
+          so it is placeheld as such rather than looking unfinished. */}
+      <Field label="Stressors">
+        {stressors.map((st, i) => (
+          <div className="il-row" key={i}>
+            <MappedValueNote
+              raw={st.category_raw}
+              unresolved={st.category_unresolved}
+              mapped={st.category}
+            />
+            <select
+              className="il-input il-input--select"
+              value={st.category}
+              onChange={(e) =>
+                set({
+                  nrt: {
+                    ...nrt,
+                    stressors: patchAt(stressors, i, {
+                      category: e.target.value as Stressor['category'],
+                    }),
+                  },
+                })
+              }
+            >
+              {STRESSOR_CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+            <input
+              className="il-input"
+              value={st.source ?? ''}
+              placeholder="Source — nothing specific stated"
+              onChange={(e) =>
+                set({
+                  nrt: { ...nrt, stressors: patchAt(stressors, i, { source: e.target.value || null }) },
+                })
+              }
+            />
+            <input
+              className="il-input il-input--sm"
+              value={st.body_area ?? ''}
+              placeholder="Body area"
+              onChange={(e) =>
+                set({
+                  nrt: {
+                    ...nrt,
+                    stressors: patchAt(stressors, i, { body_area: e.target.value || null }),
+                  },
+                })
+              }
+            />
+            <button
+              className="il-toggle"
+              onClick={() => set({ nrt: { ...nrt, stressors: removeAt(stressors, i) } })}
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+        {stressors.map((_, i) => (
+          <div key={`src-${i}`}>{src(`nrt.stressors.${i}`)}</div>
+        ))}
+        <Button
+          variant="ghost"
+          onClick={() =>
+            set({
+              nrt: {
+                ...nrt,
+                stressors: [
+                  ...stressors,
+                  { category: 'other', source: null, body_area: null, detail: null },
+                ],
+              },
+            })
+          }
+        >
+          + Add stressor
+        </Button>
+        <Prior value={p?.nrt?.stressors?.map(describeStressor).join('\n')} date={priorDate} />
       </Field>
 
       {/* One input per muscle-testing prompt, in sheet order — so a value goes
@@ -339,12 +427,20 @@ export function NoteEditor({
   );
 }
 
-const NRT_FIELDS: { key: 'pulse0' | 'priority1' | 'k27' | 'stressors'; label: string }[] = [
+// Stressors are NOT here: they are a list of structured findings, not a single
+// reading, and they get their own editor below.
+const NRT_FIELDS: { key: 'pulse0' | 'priority1' | 'k27'; label: string }[] = [
   { key: 'pulse0', label: 'Pulse 0' },
   { key: 'priority1', label: 'Priority #1' },
   { key: 'k27', label: 'K-27' },
-  { key: 'stressors', label: 'Stressors' },
 ];
+
+/** One stressor as a line of prose, for the "last time" comparison. */
+function describeStressor(s: Stressor): string {
+  const head = s.source ? `${s.category} — ${s.source}` : s.category;
+  const withArea = s.body_area ? `${head} (${s.body_area})` : head;
+  return s.detail ? `${withArea} — ${s.detail}` : withArea;
+}
 
 /**
  * What the previous session recorded for this field. Rendered only when there is

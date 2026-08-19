@@ -157,11 +157,40 @@ export interface BodyScanFindings {
   scan_cell: string | null;
   additional_nrt: string | null;
 }
+export const STRESSOR_CATEGORIES = [
+  'immune',
+  'food',
+  'chemical',
+  'metal',
+  'scar',
+  'emotional',
+  'other',
+] as const;
+export type StressorCategory = (typeof STRESSOR_CATEGORIES)[number];
+
+/**
+ * One identified stressor. A list, not a string, because a session names several
+ * minutes apart — and split into category + source because "food" and "food,
+ * specifically dairy" are a question and its answer, not the same finding.
+ *
+ * `source` null is a real reading, not a blank to be filled: it means the
+ * practitioner named the category and explicitly did NOT narrow it further.
+ */
+export interface Stressor {
+  category: StressorCategory;
+  /** The model's own word, when it wasn't already one of the categories. */
+  category_raw?: string | null;
+  category_unresolved?: boolean;
+  source: string | null;
+  body_area: string | null;
+  detail: string | null;
+}
+
 export interface NrtFindings {
   pulse0: string | null;
   priority1: string | null;
   k27: string | null;
-  stressors: string | null;
+  stressors: Stressor[];
   foundation: FoundationFindings | null;
   body_scan: BodyScanFindings | null;
 }
