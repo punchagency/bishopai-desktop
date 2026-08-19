@@ -14,6 +14,9 @@ import type {
   OutlookStatus,
   Overview,
   PocketStatus,
+  ApprovalItem,
+  ApprovalList,
+  ApprovalSummary,
   QueueItem,
   RefillDigest,
   RefillSendResponse,
@@ -755,4 +758,64 @@ export function fetchBrief(
   signal?: AbortSignal,
 ): Promise<import('./types').Brief> {
   return json(`${backendUrl}/appointments/${appointmentId}/brief`, { signal });
+}
+
+// --- Outbound approval queue ------------------------------------------------
+
+/** Emails waiting for approval. Nothing here has been seen by a client. */
+export function fetchApprovals(
+  backendUrl: string,
+  list?: ApprovalList,
+  signal?: AbortSignal,
+): Promise<{ approvals: ApprovalItem[] }> {
+  const q = list ? `?list=${list}` : '';
+  return json<{ approvals: ApprovalItem[] }>(`${backendUrl}/engagement/approvals${q}`, { signal });
+}
+
+/** Counts for the dashboard alert. */
+export function fetchApprovalSummary(
+  backendUrl: string,
+  signal?: AbortSignal,
+): Promise<ApprovalSummary> {
+  return json<ApprovalSummary>(`${backendUrl}/engagement/approvals/summary`, { signal });
+}
+
+/** Approve for sending. Does not send — the daily dispatch does. */
+export function approveEmails(backendUrl: string, ids: string[]): Promise<{ approved: number }> {
+  return json(`${backendUrl}/engagement/approvals/approve`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ ids }),
+  });
+}
+
+export function rejectEmails(
+  backendUrl: string,
+  ids: string[],
+  reason?: string,
+): Promise<{ rejected: number }> {
+  return json(`${backendUrl}/engagement/approvals/reject`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ ids, reason }),
+  });
+}
+
+/** Edit before approving. The item stays pending — editing is not approving. */
+export function updateApproval(
+  backendUrl: string,
+  id: string,
+  subject: string,
+  body: string,
+): Promise<{ ok: boolean }> {
+  return json(`${backendUrl}/engagement/approvals/${id}`, {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ subject, body }),
+  });
+}
+
+/** Send everything already approved, without waiting for the daily job. */
+export function dispatchApproved(backendUrl: string): Promise<{ sent: number; failed: number }> {
+  return json(`${backendUrl}/engagement/approvals/dispatch`, { method: 'POST' });
 }

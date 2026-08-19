@@ -256,6 +256,10 @@ export interface ExtractionMeta {
     to_turn?: number | null;
     stage?: string | null;
   }[];
+  /** Findings that state a figure the transcript never states — the fabrication
+   *  a verified quote cannot rule out, because the cited turn can be real and
+   *  about the right thing while the number in the finding was never spoken. */
+  unstated_numbers?: { path: string; value: string; numbers: number[] }[];
   attribution_coverage?: number | null;
   chunks?: number | null;
 }
@@ -747,4 +751,46 @@ export interface Brief {
   /** Fields last session never captured — her checklist for this visit. */
   not_covered_last_time: string[];
   outstanding_billing: { status: string; amount_cents: number; appointment_date: string } | null;
+}
+
+// --- Outbound approval queue ------------------------------------------------
+//
+// Nothing automated reaches a client until it is approved. The queue is split
+// into two lists: `cancelled` is the win-back track for people who cancelled a
+// booking; `normal` is everything else, grouped by why the email exists.
+
+export type ApprovalList = 'normal' | 'cancelled';
+
+export type ApprovalCategory =
+  | 'enquiry'
+  | 'appointment_lapse'
+  | 'dose_lapse'
+  | 'protocol'
+  | 'cancelled';
+
+export interface ApprovalItem {
+  id: string;
+  list: ApprovalList;
+  category: ApprovalCategory;
+  lead_id: string | null;
+  client_id: string | null;
+  to_email: string;
+  subject: string;
+  body: string;
+  /** When the cadence says this is due. */
+  send_after: string;
+  /** After this it is dropped rather than sent — a late nudge reads worse than none. */
+  expires_at: string;
+  /** What generated it: 'cadence:<track>:<step>', 'refill:<id>'. */
+  source_ref: string;
+  lead_status: string | null;
+  created_at: string;
+}
+
+export interface ApprovalSummary {
+  total: number;
+  byList: Record<string, number>;
+  byCategory: Record<string, number>;
+  /** Oldest pending item's due date — how long something has been waiting. */
+  oldestSendAfter: string | null;
 }

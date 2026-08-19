@@ -24,6 +24,7 @@ import { EmptyState } from '../components/EmptyState';
 import { InfoPopover } from '../components/InfoPopover';
 import { SearchBar } from '../components/SearchBar';
 import type { EngagementData, EngagementLead, LeadActivityItem, QueueItem, SentEmail } from '../lib/types';
+import { ApprovalsPanel } from './ApprovalsPanel';
 import { ConnectionError } from '../components/ConnectionError';
 import { allowSampleData } from '../lib/preview';
 
@@ -72,7 +73,7 @@ const STATUS_TONE: Record<string, 'accent' | 'success' | 'warning' | 'neutral'> 
   cancelled: 'warning', replied: 'success', booked: 'success', closed: 'neutral',
 };
 
-type Tab = 'leads' | 'queue' | 'templates' | 'sent';
+type Tab = 'approvals' | 'leads' | 'queue' | 'templates' | 'sent';
 
 function relativeTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -589,7 +590,7 @@ function SentRow({ item }: { item: SentEmail }) {
 
 // ── Main view ─────────────────────────────────────────────────────────────────
 export function EngagementView({ backendUrl, onChanged }: { backendUrl: string; onChanged?: () => void }) {
-  const [tab, setTab] = useState<Tab>('leads');
+  const [tab, setTab] = useState<Tab>('approvals');
   const [data, setData] = useState<EngagementData | null>(null);
   const [activity, setActivity] = useState<LeadActivityItem[]>([]);
   const [queue, setQueue] = useState<QueueItem[] | null>(null);
@@ -821,6 +822,13 @@ export function EngagementView({ backendUrl, onChanged }: { backendUrl: string; 
       {/* Tab bar */}
       <div className="il-tabs" role="tablist">
         <button
+          id="tab-approvals" role="tab" aria-selected={tab === 'approvals'}
+          className={`il-tab${tab === 'approvals' ? ' il-tab--on' : ''}`}
+          onClick={() => setTab('approvals')}
+        >
+          Approvals
+        </button>
+        <button
           id="tab-leads" role="tab" aria-selected={tab === 'leads'}
           className={`il-tab${tab === 'leads' ? ' il-tab--on' : ''}`}
           onClick={() => setTab('leads')}
@@ -832,7 +840,7 @@ export function EngagementView({ backendUrl, onChanged }: { backendUrl: string; 
           className={`il-tab${tab === 'queue' ? ' il-tab--on' : ''}`}
           onClick={() => setTab('queue')}
         >
-          Queue {queueRows.length > 0 && <span className="il-tab__count">{queueRows.length}</span>}
+          Upcoming {queueRows.length > 0 && <span className="il-tab__count">{queueRows.length}</span>}
         </button>
         <button
           id="tab-templates" role="tab" aria-selected={tab === 'templates'}
@@ -849,6 +857,13 @@ export function EngagementView({ backendUrl, onChanged }: { backendUrl: string; 
           Sent {sentData.total > 0 && <span className="il-tab__count">{sentData.total}</span>}
         </button>
       </div>
+
+      {/* ── Approvals tab ──────────────────────────────────────────────────
+          The gate. Everything automated waits here; the tabs beside it are
+          history and forecast. ─────────────────────────────────────────────── */}
+      {tab === 'approvals' && (
+        <ApprovalsPanel backendUrl={backendUrl} offline={offline} onChanged={onChanged} />
+      )}
 
       {/* ── Leads tab ──────────────────────────────────────────────────────── */}
       {tab === 'leads' && (

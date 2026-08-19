@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { StatCard } from '../components/StatCard';
+import { ApprovalAlert } from '../components/ApprovalAlert';
 import { Feed, type FeedRow } from '../components/Feed';
 import { Badge } from '../components/Badge';
 import { Skeleton, SkeletonView } from '../components/Skeleton';
@@ -106,6 +107,11 @@ export function Overview({ backendUrl, pocket, onNavigate }: Props) {
           <p className="il-view__sub">Your practice at a glance{offline && ' · offline preview'}</p>
         </div>
       </div>
+
+      {/* Above the stats, because it is the one thing on this page that is about
+          to happen TO someone else. Everything below is work waiting for Nicole;
+          this is mail waiting to leave, and it does not leave without her. */}
+      <ApprovalAlert backendUrl={backendUrl} offline={offline} onNavigate={onNavigate} />
 
       <div className="il-stats">
         <button className="il-stat-btn" onClick={() => onNavigate('review')}>

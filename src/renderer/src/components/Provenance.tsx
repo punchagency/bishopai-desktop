@@ -339,8 +339,14 @@ export function ExtractionBanner({
   const partial = meta?.partial ?? [];
   const conflicts = meta?.conflicts ?? [];
   const gaps = meta?.gaps ?? [];
+  const unstated = meta?.unstated_numbers ?? [];
   if (
-    !partial.length && !conflicts.length && !gaps.length && !unverified.length && !reworded.length
+    !partial.length &&
+    !conflicts.length &&
+    !gaps.length &&
+    !unverified.length &&
+    !reworded.length &&
+    !unstated.length
   )
     return null;
 
@@ -390,6 +396,24 @@ export function ExtractionBanner({
             </>
           )}
           Those fields may have been invented — they are marked below.
+        </div>
+      )}
+      {unstated.length > 0 && (
+        <div className="il-extract-banner__row il-extract-banner__row--danger">
+          <strong>
+            {unstated.length} finding{unstated.length === 1 ? '' : 's'} state a number nobody
+            said.
+          </strong>{' '}
+          The source quote can still check out — a real turn, about the right thing, with a
+          figure added to it. Read these against the transcript:
+          <ul className="il-extract-banner__list">
+            {unstated.map((u) => (
+              <li key={u.path}>
+                <code>{u.path}</code>: {u.value}{' '}
+                <em>({u.numbers.join(', ')} not in the session)</em>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
       {reworded.length > 0 && (
