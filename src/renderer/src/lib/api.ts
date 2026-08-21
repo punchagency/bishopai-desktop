@@ -144,6 +144,55 @@ export function fetchCandidates(
   return json(`${backendUrl}/review/unmatched/${id}/candidates`);
 }
 
+export interface SessionSegment {
+  from_turn: number;
+  to_turn: number;
+  client_name_hint?: string | null;
+  /** Server-computed best appointment match by overlap maximisation. */
+  suggested_appointment_id?: string | null;
+  snippet: string;
+  confidence_score?: number;
+  /** Present when segmentation could not run — shown instead of a fake session. */
+  detection_note?: string | null;
+  /** Present when turn-share and calendar-overlap disagree by > 25%. */
+  time_disagreement_note?: string | null;
+}
+
+/** One turn as the backend numbered it. `SessionSegment.from_turn` indexes into
+ *  this list, so the two only line up because they come from the same parse. */
+export interface SessionTurn {
+  index: number;
+  speaker: string;
+  role: 'PRACTITIONER' | 'CLIENT' | 'UNKNOWN';
+  text: string;
+}
+
+/** Detect multi-session boundaries for a recording. */
+export function fetchSegments(
+  backendUrl: string,
+  id: string,
+): Promise<{
+  conversation_id: string;
+  segments: SessionSegment[];
+  candidates: CandidateAppointment[];
+  turns: SessionTurn[];
+}> {
+  return json(`${backendUrl}/review/unmatched/${id}/segments`);
+}
+
+/** Split a multi-session recording into separate child session conversations. */
+export function splitUnmatchedConversation(
+  backendUrl: string,
+  id: string,
+  segments: Array<{ from_turn: number; to_turn: number; appointment_id?: string; client_id?: string }>,
+): Promise<{ parent_id: string; split_conversations: string[] }> {
+  return json(`${backendUrl}/review/unmatched/${id}/split`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ segments }),
+  });
+}
+
 /**
  * Import a transcript by hand (paste or drag-drop) — no recorder involved.
  * Lands an unmatched conversation (deduplicated server-side on the transcript
