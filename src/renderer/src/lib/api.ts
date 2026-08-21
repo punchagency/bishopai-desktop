@@ -231,6 +231,17 @@ export function amendItem(
   });
 }
 
+/** Re-run LLM extraction on an existing recording using the latest extraction pipeline. */
+export function reextractItem(
+  backendUrl: string,
+  kind: ReviewKind,
+  id: string,
+): Promise<{ status: string }> {
+  return json<{ status: string }>(`${backendUrl}/review/${kind}/${id}/reextract`, {
+    method: 'POST',
+  });
+}
+
 /** The client's previous sessions, newest first — the running flow sheet view. */
 export function fetchSessionHistory(
   backendUrl: string,

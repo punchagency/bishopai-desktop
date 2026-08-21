@@ -12,6 +12,7 @@ import {
   fetchRevisions,
   fetchSessionHistory,
   patchItem,
+  reextractItem,
   unmatchReviewItem,
   type NoteRevision,
 } from '../lib/api';
@@ -232,6 +233,24 @@ export function ReviewDetail({ backendUrl, kind, id, clientName, onClose, onChan
     }
   };
 
+  const reextract = async () => {
+    if (isSample) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await reextractItem(backendUrl, kind, id);
+      const row = await fetchItem(backendUrl, kind, id);
+      setNote(row.content_json);
+      savedNoteRef.current = JSON.stringify(row.content_json);
+      loadPreview();
+      setBusy(false);
+      onChanged();
+    } catch (e) {
+      setError(String(e));
+      setBusy(false);
+    }
+  };
+
   // One session, rendered two ways — the internal Appointment Sheet keeps the
   // practitioner's assessments, the client Protocol drops them. Both come from
   // the same note, so the header names the session, not a document.
@@ -438,6 +457,9 @@ export function ReviewDetail({ backendUrl, kind, id, clientName, onClose, onChan
                 </span>
               )
             )}
+            <Button variant="secondary" onClick={reextract} disabled={busy || isSample} title="Re-run extraction with the latest pipeline">
+              {busy ? 'Re-extracting…' : 'Re-extract'}
+            </Button>
             <Button variant="secondary" onClick={() => setTab('edit')} disabled={isSample}>
               Edit
             </Button>
