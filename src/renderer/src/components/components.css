@@ -3456,3 +3456,161 @@
   outline: none;
   box-shadow: var(--ring);
 }
+
+/* ── "Not extracted" — matched recordings with no readable note ───────────── */
+
+.il-unprocessed {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* A spent daily allowance is a WAIT, not a fault, and it must not be dressed in
+   the warning colours the rows below it use. Every one of those rows says
+   "nothing was extracted", which reads as breakage; this is the one line that
+   explains all of them at once and says nothing needs doing. */
+.il-quota-banner {
+  padding: 0.7rem 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  color: var(--text);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+/* These rows carry two lines of explanation rather than one line to scan, so
+   they breathe more than a queue row and don't pretend to be clickable. */
+.il-qrow--stack {
+  align-items: flex-start;
+  padding: 0.15rem 0.3rem 0.15rem 0;
+}
+.il-qrow__main--static {
+  cursor: default;
+}
+.il-qrow--stack .il-qrow__meta {
+  white-space: normal;
+  overflow: visible;
+}
+.il-qrow--stack .il-qrow__name {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: normal;
+}
+/* Unlike Approve on a queue row, this one stays visible: the row is not
+   hoverable-to-reveal (it doesn't open anything), so a hidden action here would
+   simply never be found. */
+.il-qrow__retry {
+  flex: none;
+  align-self: center;
+}
+
+/* The "Not extracted" split. A wider list column than the review queue's,
+   because these rows are not one line to scan: each carries a reason badge, the
+   recording's length, and often what the note is missing — and the allowance
+   banner sits at the top of the same column. */
+.il-split--unprocessed {
+  grid-template-columns: minmax(17rem, 25rem) 1fr;
+}
+.il-unprocessed__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+/* In a narrow column the retry button would squeeze the client's name to an
+   ellipsis. Let it drop to its own line instead — the name is what the row is
+   for. */
+.il-qrow--stack {
+  flex-wrap: wrap;
+}
+.il-qrow--stack .il-qrow__main {
+  min-width: 12rem;
+}
+
+/* The provider's own error text, for whoever is asked to look into it later.
+   Closed by default and quiet when open: on a quota refusal it is ~900
+   characters of JSON about metrics and retry delays, which is precisely the
+   thing a practitioner should never be shown by default. */
+.il-tech-details {
+  margin: 0.75rem 0 0;
+  font-size: 0.8rem;
+}
+.il-tech-details > summary {
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 0.25rem 0;
+  user-select: none;
+}
+.il-tech-details > summary:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+  border-radius: var(--radius-sm, 4px);
+}
+.il-tech-details > pre {
+  margin: 0.4rem 0 0;
+  padding: 0.6rem 0.7rem;
+  max-height: 12rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
+/* ── List + transcript skeletons ─────────────────────────────────────────── */
+
+.il-skel-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.il-skel-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.55rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+}
+
+/* Mirrors .il-srcpane so the swap to the real transcript is a fill, not a
+   relayout. */
+.il-skel-tx {
+  margin-top: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.il-skel-tx__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.6rem 0.8rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.il-skel-tx__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem;
+}
+.il-skel-tx__turn {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: 6px;
+  border-left: 3px solid var(--border);
+  background: rgba(0, 0, 0, 0.02);
+}
+/* The practitioner's tint, matching the real pane's alternation. */
+.il-skel-tx__turn--alt {
+  border-left-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+}

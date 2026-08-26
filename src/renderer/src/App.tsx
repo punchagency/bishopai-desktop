@@ -50,6 +50,11 @@ export function App() {
   // Recordings still extracting — surfaced as a "processing" banner in the Review
   // Queue (not a nav badge, since these aren't yet actionable drafts).
   const [processing, setProcessing] = useState(0);
+  // Matched recordings with no readable note. Deliberately NOT folded into the
+  // `review` nav badge: those are drafts to read, these are sessions that were
+  // never read, and adding them to the same number would hide the difference
+  // behind an unchanged count.
+  const [unprocessed, setUnprocessed] = useState(0);
   const [backendOnline, setBackendOnline] = useState(true);
   // Manual transcript import: whether the modal is open, what text to prefill it
   // with (from a dropped file), and whether a file is currently being dragged in.
@@ -100,22 +105,31 @@ export function App() {
   const refreshCounts = useCallback(() => {
     if (!backendUrl) return;
     const num = (v: number | string | undefined) => Number(v) || 0;
+    console.log('[refreshCounts] Fetching overview stats...');
     fetchOverview(backendUrl)
       .then((d) => {
+        console.log('[refreshCounts] Fetch success, raw stats:', d.stats);
         setBackendOnline(true);
-        setCounts({
-          review: num(d.stats.awaiting_review),
-          unmatched: num(d.stats.unmatched),
-          refills: num(d.stats.refills_due),
-          engagement: num(d.stats.leads_active),
-          checkout: num(d.stats.checkouts_awaiting),
+        setCounts((prev) => {
+          const next = {
+            review: num(d.stats.awaiting_review),
+            unmatched: num(d.stats.unmatched),
+            refills: num(d.stats.refills_due),
+            engagement: num(d.stats.engagement_pending),
+            checkout: num(d.stats.checkouts_awaiting),
+          };
+          console.log('[refreshCounts] Transitioning counts state:', { prev, next });
+          return next;
         });
         setProcessing(num(d.stats.processing));
+        setUnprocessed(num(d.stats.unprocessed));
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error('[refreshCounts] Fetch failed:', err);
         setBackendOnline(false);
         setCounts({});
         setProcessing(0);
+        setUnprocessed(0);
       });
   }, [backendUrl]);
 
@@ -240,7 +254,12 @@ export function App() {
         <main className="il-main">
           {view === 'overview' && <Overview backendUrl={backendUrl} pocket={pocket} onNavigate={setView} />}
           {view === 'review' && (
-            <ReviewQueue backendUrl={backendUrl} onChanged={refreshCounts} processing={processing} />
+            <ReviewQueue
+              backendUrl={backendUrl}
+              onChanged={refreshCounts}
+              processing={processing}
+              unprocessed={unprocessed}
+            />
           )}
           {view === 'unmatched' && <UnmatchedView backendUrl={backendUrl} onChanged={refreshCounts} />}
           {view === 'checkout' && <CheckoutView backendUrl={backendUrl} onChanged={refreshCounts} />}

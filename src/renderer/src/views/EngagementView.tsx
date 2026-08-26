@@ -694,9 +694,9 @@ export function EngagementView({ backendUrl, onChanged }: { backendUrl: string; 
     const ctrl = new AbortController();
     try {
       await stopLead(backendUrl, id);
+    } catch { /* surfaced on next load */ } finally {
       await loadAll(ctrl.signal);
       onChanged?.();
-    } catch { /* surfaced on next load */ } finally {
       setPending(null);
     }
   };
@@ -707,9 +707,9 @@ export function EngagementView({ backendUrl, onChanged }: { backendUrl: string; 
     const ctrl = new AbortController();
     try {
       await runCadence(backendUrl);
+    } catch { /* surfaced on next load */ } finally {
       await loadAll(ctrl.signal);
       onChanged?.();
-    } catch { /* surfaced on next load */ } finally {
       setRunning(false);
     }
   };

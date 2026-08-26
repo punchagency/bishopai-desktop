@@ -80,11 +80,11 @@ export function RefillsView({ backendUrl, onChanged }: { backendUrl: string; onC
     setPending(id);
     try {
       await fn();
-      await load();
-      onChanged?.();
     } catch {
       /* surfaced on next load */
     } finally {
+      await load();
+      onChanged?.();
       setPending(null);
     }
   };
@@ -97,11 +97,11 @@ export function RefillsView({ backendUrl, onChanged }: { backendUrl: string; onC
     try {
       const res = await sendRefillOrders(backendUrl, ids);
       setResult(res);
-      await load();
-      onChanged?.();
     } catch {
       setResult(null); // surfaced on next load
     } finally {
+      await load();
+      onChanged?.();
       setSending(false);
     }
   };

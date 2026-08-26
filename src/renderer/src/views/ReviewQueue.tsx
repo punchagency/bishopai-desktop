@@ -4,13 +4,20 @@ import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { approveItem, fetchReviewQueue } from '../lib/api';
 import { formatDate, humanize } from '../lib/format';
-import { SkeletonView } from '../components/Skeleton';
+import { Skeleton, SkeletonRows } from '../components/Skeleton';
 import { EmptyState } from '../components/EmptyState';
 import { InfoPopover } from '../components/InfoPopover';
 import { SearchBar } from '../components/SearchBar';
-import type { ReviewKind, ReviewQueue as Queue, ReviewSession } from '../lib/types';
+import type {
+  ReviewKind,
+  ReviewQueue as Queue,
+  ReviewSession,
+  UnprocessedSession,
+} from '../lib/types';
 import { ReviewDetail } from './ReviewDetail';
 import { ConnectionError } from '../components/ConnectionError';
+import { UnprocessedPanel } from './UnprocessedPanel';
+import { UnprocessedDetail } from './UnprocessedDetail';
 import { allowSampleData } from '../lib/preview';
 
 // Sample data so the dashboard renders standalone when the backend isn't up
@@ -32,6 +39,9 @@ const SAMPLE: Queue = {
   ],
 };
 
+/** Which list the Sessions view is showing. */
+type Scope = 'pending' | 'approved' | 'unprocessed';
+
 interface Selection {
   /** Which document backs the detail view — the session's note is the same in
    *  both, so the sheet is preferred and the protocol is the fallback for a
@@ -47,6 +57,7 @@ export function ReviewQueue({
   backendUrl,
   onChanged,
   processing = 0,
+  unprocessed = 0,
 }: {
   backendUrl: string;
   onChanged?: () => void;
@@ -54,17 +65,31 @@ export function ReviewQueue({
    *  stats. Shown as a banner so a just-imported/assigned session reads as
    *  "working" rather than missing until its draft lands. */
   processing?: number;
+  /** Matched recordings with no readable note, from the overview stats. Drives
+   *  the count on the "Not extracted" tab. */
+  unprocessed?: number;
 }) {
   const [queue, setQueue] = useState<Queue | null>(null);
   const [offline, setOffline] = useState(false);
   // Fetch failed and samples are not allowed here (any non-local backend).
   const [unreachable, setUnreachable] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Selection | null>(null);
   const [pending, setPending] = useState<string | null>(null); // id being approved inline
   // Approved sessions used to disappear from the app entirely. This is how a
   // finished session stays reachable — to look back at, or to correct.
-  const [scope, setScope] = useState<'pending' | 'approved'>('pending');
+  //
+  // 'unprocessed' is a third destination rather than a filter on the first two:
+  // its rows are not sessions awaiting approval, they are recordings with no
+  // note to approve, and they carry a different question ("why is this empty?"
+  // rather than "is this right?"). It renders its own panel below.
+  const [scope, setScope] = useState<Scope>('pending');
+  // The open row on the "Not extracted" tab. Kept apart from `selected`: that
+  // one addresses a NOTE by sheet/protocol id, and these rows have no note to
+  // address — the whole point of them — so they are opened by recording.
+  const [selectedUnprocessed, setSelectedUnprocessed] = useState<UnprocessedSession | null>(null);
+  // Bumped after a re-run so the list refetches and the row leaves once it has
+  // a real note.
+  const [unprocessedReload, setUnprocessedReload] = useState(0);
   // Search only earns its place on the Approved archive — the growing list where
   // finding one client's past visit means scrolling. Pending is a daily handful.
   const [query, setQuery] = useState('');
@@ -82,9 +107,11 @@ export function ReviewQueue({
 
   const load = useCallback(
     (signal?: AbortSignal) => {
-      setLoading(true);
+      // The unprocessed tab has its own source; fetching the review queue for it
+      // would poll a list nothing is showing.
+      if (scope === 'unprocessed') return Promise.resolve();
       // Search is approved-only; pending never carries a query.
-      return fetchReviewQueue(backendUrl, signal, scope, scope === 'approved' ? query : undefined)
+      return fetchReviewQueue(backendUrl, signal, scope as 'pending' | 'approved', scope === 'approved' ? query : undefined)
         .then((q) => {
           setQueue(q);
           setOffline(false);
@@ -103,8 +130,7 @@ export function ReviewQueue({
           } else {
             setUnreachable(err.message);
           }
-        })
-        .finally(() => setLoading(false));
+        });
     },
     [backendUrl, scope, query],
   );
@@ -126,10 +152,20 @@ export function ReviewQueue({
     };
   }, [load, query]);
 
-  const switchScope = (next: 'pending' | 'approved') => {
+  const switchScope = (next: Scope) => {
     if (next === scope) return;
     setSelected(null); // the open row won't be in the new list
+    setSelectedUnprocessed(null); // nor will this one
     setQuery(''); // a filter from the other tab would silently hide everything
+    // Drop the rows with the tab that produced them.
+    //
+    // Without this the new tab paints instantly with the OLD tab's sessions
+    // underneath it and swaps them out a beat later when the fetch lands — so
+    // clicking "Approved" showed a list of pending drafts labelled Approved,
+    // which is not a slow load, it is a wrong answer that corrects itself. The
+    // skeleton below keys off `queue` being empty, so clearing it is what makes
+    // the switch read as loading rather than as loaded-and-wrong.
+    setQueue(null);
     setScope(next);
   };
 
@@ -150,12 +186,20 @@ export function ReviewQueue({
   };
 
   if (unreachable) return <ConnectionError backendUrl={backendUrl} detail={unreachable} onRetry={() => load()} />;
-  if (loading && !queue) return <SkeletonView cards={6} />;
 
-  const q = queue ?? SAMPLE;
-  // Filtering is server-side now (so a name search reaches the whole archive,
-  // not just the recent page), so the returned rows are already the result set.
-  const sessions = q.sessions;
+  // Keyed on the ABSENCE OF DATA, not on a `loading` flag. The flag was set
+  // inside the fetch, a tick after the click, and for that tick it was still
+  // false while the previous tab's rows sat in `queue` — so the old list
+  // painted under the new tab and swapped a beat later. There is no longer a
+  // flag to get out of step with: switchScope clears `queue`, and empty means
+  // empty. The unprocessed tab never fills `queue` — it has its own source and
+  // its own skeleton — so it is excluded.
+  const loadingList = scope !== 'unprocessed' && !queue;
+
+  // Only the LIST waits. Returning a full-page skeleton here would take the
+  // title and the tab bar down with it, so clicking a tab would blank the tabs
+  // you just clicked — trading a wrong answer for a flicker.
+  const sessions = queue?.sessions ?? [];
   const total = sessions.length;
   const searching = scope === 'approved' && query.trim().length > 0;
   // Group by client only on the Approved archive, and not while searching — a
@@ -208,12 +252,22 @@ export function ReviewQueue({
             </InfoPopover>
           </h1>
           <p className="il-view__sub">
-            {searching
-              ? `${total} match${total === 1 ? '' : 'es'} for "${query.trim()}"`
-              : scope === 'pending'
-                ? `${total} item${total === 1 ? '' : 's'} awaiting your approval`
-                : `${total} approved item${total === 1 ? '' : 's'}`}
-            {offline && <Badge tone="warning">&nbsp;offline preview&nbsp;</Badge>}
+            {loadingList ? (
+              // "0 items awaiting your approval" while the count is still
+              // unknown is the same class of wrong answer the list had.
+              <Skeleton width="13rem" height="0.85rem" />
+            ) : scope === 'unprocessed' ? (
+              'Recordings matched to a client that have no readable note yet'
+            ) : (
+              searching
+                ? `${total} match${total === 1 ? '' : 'es'} for "${query.trim()}"`
+                : scope === 'pending'
+                  ? `${total} item${total === 1 ? '' : 's'} awaiting your approval`
+                  : `${total} approved item${total === 1 ? '' : 's'}`
+            )}
+            {offline && scope !== 'unprocessed' && (
+              <Badge tone="warning">&nbsp;offline preview&nbsp;</Badge>
+            )}
           </p>
         </div>
       </div>
@@ -231,8 +285,60 @@ export function ReviewQueue({
         >
           Approved
         </button>
+        {/* Carries a count because its whole purpose is to be noticed when it is
+            not empty — a blank note is invisible by nature, and the reason this
+            tab exists is that seven of them went unnoticed for two days. */}
+        <button
+          className={`il-tab ${scope === 'unprocessed' ? 'il-tab--on' : ''}`}
+          onClick={() => switchScope('unprocessed')}
+        >
+          Not extracted
+          {unprocessed > 0 && <span className="il-tab__count">{unprocessed}</span>}
+        </button>
       </div>
 
+      {scope === 'unprocessed' ? (
+        /* Same split pane as the queue, for the same reason: the list stays on
+           screen while a transcript is open, so moving down it doesn't mean
+           losing your place. Collapses to one column on narrow windows. */
+        <div
+          className={`il-split il-split--unprocessed ${
+            selectedUnprocessed ? 'il-split--open' : ''
+          }`}
+        >
+          <div className="il-split__list">
+            <UnprocessedPanel
+              backendUrl={backendUrl}
+              onChanged={onChanged}
+              selectedId={selectedUnprocessed?.conversation_id ?? null}
+              onSelect={setSelectedUnprocessed}
+              reloadKey={unprocessedReload}
+            />
+          </div>
+          <div className="il-split__detail">
+            {selectedUnprocessed ? (
+              <UnprocessedDetail
+                key={selectedUnprocessed.conversation_id}
+                backendUrl={backendUrl}
+                row={selectedUnprocessed}
+                onClose={() => setSelectedUnprocessed(null)}
+                onChanged={() => {
+                  // The row is now queued, so it stops being the thing on
+                  // screen: close the pane and let the list say where it went.
+                  setSelectedUnprocessed(null);
+                  setUnprocessedReload((n) => n + 1);
+                  onChanged?.();
+                }}
+              />
+            ) : (
+              <div className="il-split__placeholder">
+                <p>Pick a session to read its transcript.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+      <>
       {scope === 'pending' && processing > 0 && (
         <div className="il-processing" role="status">
           <span className="il-processing__spinner" aria-hidden="true" />
@@ -243,7 +349,18 @@ export function ReviewQueue({
         </div>
       )}
 
-      {total === 0 && !searching ? (
+      {loadingList ? (
+        <div className="il-split">
+          <div className="il-split__list">
+            <SkeletonRows rows={6} />
+          </div>
+          <div className="il-split__detail">
+            <div className="il-split__placeholder">
+              <p>Pick a session to review it here.</p>
+            </div>
+          </div>
+        </div>
+      ) : total === 0 && !searching ? (
         <div className="il-view__empty">
           {scope === 'pending' ? (
             <EmptyState variant="review_pending" />
@@ -314,6 +431,8 @@ export function ReviewQueue({
             )}
           </div>
         </div>
+      )}
+      </>
       )}
     </section>
   );

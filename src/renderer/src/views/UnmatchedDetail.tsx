@@ -8,6 +8,7 @@ import type { UnmatchedConversation, UnmatchedDetail as Detail } from '../lib/ty
 import { MatchModal } from './MatchModal';
 import { MultiSessionSplitterModal } from '../components/MultiSessionSplitterModal';
 import { IconRefresh, IconScissors } from '../components/Icons';
+import { SkeletonTranscript } from '../components/Skeleton';
 
 interface Props {
   backendUrl: string;
@@ -89,7 +90,17 @@ function HighlightedText({ text, query }: { text: string; query: string }) {
   );
 }
 
-function UnmatchedTranscriptViewer({
+/**
+ * The transcript reader: search, role swap, numbered turns, session dividers.
+ *
+ * Exported because the "Not extracted" pane needs exactly this and nothing
+ * beside it. `onSplitAtTurn` and `segments` were already optional, and that is
+ * what makes the reuse honest rather than a fork: omit them and the split
+ * affordance and the encounter dividers simply do not render, which is right
+ * for a recording already filed against one appointment — there is nothing left
+ * to split it into.
+ */
+export function UnmatchedTranscriptViewer({
   transcript,
   sessionTurns,
   segments = [],
@@ -401,7 +412,7 @@ export function UnmatchedDetail({ backendUrl, conversation, onClose, onMatched }
         ) : isSample ? (
           <p className="il-empty">The full transcript needs a running backend — this is offline sample data.</p>
         ) : (
-          <p className="il-empty">Loading transcript…</p>
+          <SkeletonTranscript />
         )}
       </div>
 

@@ -117,11 +117,11 @@ export function CheckoutView({ backendUrl, onChanged }: { backendUrl: string; on
     setPending(id);
     try {
       await fn();
+    } catch {
+      // status reflects the outcome (e.g. CHARGE_FAILED)
+    } finally {
       await load();
       onChanged?.();
-    } catch {
-      await load(); // status reflects the outcome (e.g. CHARGE_FAILED)
-    } finally {
       setPending(null);
     }
   };

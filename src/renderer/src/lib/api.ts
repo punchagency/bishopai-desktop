@@ -30,6 +30,7 @@ import type {
   SessionNote,
   UnmatchedConversation,
 } from './types';
+import { ApiError, humanizeApiError } from './errors';
 
 // Session token for the local dashboard auth. Held in memory; the app also
 // persists it and calls setAuthToken on boot. Attached to every backend request
@@ -46,20 +47,38 @@ export function setUnauthorizedHandler(cb: () => void): void {
 async function json<T>(url: string, init?: RequestInit): Promise<T> {
   const headers: Record<string, string> = { ...(init?.headers as Record<string, string> | undefined) };
   if (authToken) headers.authorization = `Bearer ${authToken}`;
-  const res = await fetch(url, { ...init, headers });
-  if (res.status === 401) {
-    onUnauthorized?.(); // login turned on (or token expired) — bounce to login
-    throw new Error(`${init?.method ?? 'GET'} ${new URL(url).pathname} → 401`);
+  const method = init?.method ?? 'GET';
+  const path = new URL(url).pathname;
+
+  let res: Response;
+  try {
+    res = await fetch(url, { ...init, headers });
+  } catch (err) {
+    // Server down, wrong address, no network. `fetch` rejects with "Failed to
+    // fetch", which is both technical and wrong-sounding — it reads as though
+    // the app broke rather than that nothing answered.
+    if (err instanceof DOMException && err.name === 'AbortError') throw err;
+    throw new ApiError(humanizeApiError(null, method, null), {
+      status: null,
+      technical: `${method} ${path} → ${err instanceof Error ? err.message : String(err)}`,
+    });
   }
+
+  if (res.status === 401) onUnauthorized?.(); // login on (or token expired) — bounce to login
+
   if (!res.ok) {
-    // The backend sends a human explanation ("This session has been approved and
-    // its documents published…"). Showing Nicole a URL and a status code instead
-    // tells her nothing about what went wrong or what to do next.
-    const detail = await res
+    // The backend often sends a human explanation ("This session has been
+    // approved and its documents published…"), and that always wins. What it
+    // sends otherwise — `internal error`, `not found` — is a protocol fact, and
+    // so is the status; neither belongs on screen. See lib/errors.ts.
+    const body = await res
       .json()
-      .then((b: { detail?: string; error?: string }) => b.detail || b.error)
+      .then((b: { detail?: unknown; error?: unknown }) => b)
       .catch(() => null);
-    throw new Error(detail || `${init?.method ?? 'GET'} ${new URL(url).pathname} → ${res.status}`);
+    throw new ApiError(humanizeApiError(res.status, method, body), {
+      status: res.status,
+      technical: `${method} ${path} → ${res.status}`,
+    });
   }
   return (await res.json()) as T;
 }
@@ -125,6 +144,38 @@ export function fetchUnmatched(
   signal?: AbortSignal,
 ): Promise<{ conversations: UnmatchedConversation[] }> {
   return json(`${backendUrl}/review/unmatched`, { signal });
+}
+
+/** One matched recording in full — transcript plus backend-numbered turns.
+ *  Reached from the "Not extracted" list, where the note is the thing missing
+ *  and the transcript is the thing that answers the question anyway. */
+export function fetchConversationDetail(
+  backendUrl: string,
+  id: string,
+  signal?: AbortSignal,
+): Promise<{ conversation: import('./types').ConversationDetail }> {
+  return json(`${backendUrl}/review/conversations/${id}`, { signal });
+}
+
+/** Matched recordings that never produced a readable note (see UnprocessedSession). */
+export function fetchUnprocessed(
+  backendUrl: string,
+  signal?: AbortSignal,
+): Promise<{ sessions: import('./types').UnprocessedSession[] }> {
+  return json(`${backendUrl}/review/unprocessed`, { signal });
+}
+
+/** Re-run extraction addressed by RECORDING rather than by note. The blank-note
+ *  case has a sheet to aim at, but a conversation that failed before writing one
+ *  does not — and that is exactly the row most in need of a retry. */
+export function reextractConversation(
+  backendUrl: string,
+  conversationId: string,
+): Promise<{ status: string }> {
+  return json<{ status: string }>(
+    `${backendUrl}/review/conversations/${conversationId}/reextract`,
+    { method: 'POST' },
+  );
 }
 
 /** One unmatched recording in full (whole transcript + timing) for the detail pane. */

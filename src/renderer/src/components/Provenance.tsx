@@ -2,6 +2,7 @@ import { forwardRef, useEffect, useMemo, useRef, useState } from 'react';
 import type { Evidence, ExtractionMeta, SessionNote, TranscriptTurn } from '../lib/types';
 import { createPortal } from 'react-dom';
 import { locate } from '../lib/locateQuote';
+import { stageLabel, stageList } from '../lib/errors';
 
 // Provenance in the review pane.
 //
@@ -50,7 +51,7 @@ function gapLabel(g: {
       : g.from_turn != null && g.to_turn != null
         ? `turns #${g.from_turn}–#${g.to_turn}`
         : 'an unlabelled stretch';
-  return g.stage ? `${where} (${g.stage})` : where;
+  return g.stage ? `${where} (${stageLabel(g.stage)})` : where;
 }
 
 /** What each verification state means where Nicole is reading, not in schema terms. */
@@ -354,9 +355,9 @@ export function ExtractionBanner({
     <div className="il-extract-banner">
       {partial.length > 0 && (
         <div className="il-extract-banner__row il-extract-banner__row--warn">
-          <strong>Incomplete extraction.</strong> These parts were not read:{' '}
-          {partial.join(', ')}. Fields they would have filled are blank because they were
-          never looked at — not because nothing was said.
+          <strong>Some of this session was not read.</strong> Missing from this note:{' '}
+          {stageList(partial)}. Those parts are blank because they were never looked at — not
+          because nothing was said.
         </div>
       )}
       {gaps.length > 0 && (

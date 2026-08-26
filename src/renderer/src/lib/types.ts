@@ -340,6 +340,73 @@ export interface UnmatchedConversation {
   transcript_preview: string;
 }
 
+/**
+ * Why a matched recording has no readable note. Mirrors UnprocessedReason in
+ * server/src/session/unprocessed.ts.
+ */
+export type UnprocessedReason =
+  | 'quota'
+  | 'failed'
+  | 'needs_review'
+  | 'queued'
+  | 'running'
+  | 'blank'
+  | 'incomplete';
+
+/**
+ * GET /review/unprocessed — a session we know the owner of, holding a
+ * transcript, with nothing extracted from it.
+ *
+ * Distinct from UnmatchedConversation, which is the opposite problem: there the
+ * recording is fine and we don't know whose it is.
+ */
+export interface UnprocessedSession {
+  conversation_id: string;
+  appointment_id: string;
+  client_id: string | null;
+  client_name: string | null;
+  appointment_at: string | null;
+  recorded_at: string;
+  /** Length of the recording. Shown instead of a character count. */
+  duration_seconds: number | null;
+  transcript_chars: number;
+  extraction_status: string;
+  extraction_attempts: number;
+  extraction_error: string | null;
+  next_attempt_at: string | null;
+  reason: UnprocessedReason;
+  /** Stages the model never read, from extraction.partial. */
+  partial: string[];
+  /** Findings the note does hold — 0 for a blank one. */
+  findings: number;
+  sheet_id: string | null;
+}
+
+/**
+ * GET /review/conversations/:id — one MATCHED recording in full.
+ *
+ * The read-only twin of UnmatchedDetail. It exists so a session whose note is
+ * blank, failed or still waiting on the model allowance is not also a session
+ * whose transcript cannot be read — the recording is the primary record, and
+ * being unable to open it is a harder block than having no note.
+ */
+export interface ConversationDetail {
+  id: string;
+  source_id: string;
+  source: string;
+  starts_at: string;
+  ends_at: string;
+  correlation_status: string;
+  extraction_status: string;
+  extraction_error: string | null;
+  appointment_id: string | null;
+  appointment_at: string | null;
+  client_name: string | null;
+  transcript: string | null;
+  /** Numbered by the backend, through the same parse the extractor used. */
+  turns: TranscriptTurn[];
+}
+
 /** GET /review/unmatched/:id — one recording in full, for the detail pane. */
 export interface UnmatchedDetail {
   id: string;
@@ -644,10 +711,13 @@ export interface OverviewStats {
   unmatched: number | string;
   /** Matched recordings whose extraction is still running (pending/processing/retrying). */
   processing?: number | string;
+  /** Matched recordings that produced no readable note — see UnprocessedSession. */
+  unprocessed?: number | string;
   upcoming: number | string;
   approved_today: number | string;
   refills_due?: number | string;
   leads_active?: number | string;
+  engagement_pending?: number | string;
   checkouts_awaiting?: number | string;
 }
 export interface ActivityItem {

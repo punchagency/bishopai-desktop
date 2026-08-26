@@ -101,3 +101,54 @@ export function SkeletonView({
     </section>
   );
 }
+
+/**
+ * Placeholder rows for a narrow list column.
+ *
+ * `SkeletonView` is a whole-PAGE shape — a title block, an optional stat row, a
+ * card grid — so dropping it into a 20rem list column paints a fake page header
+ * where the list belongs and cards wider than the column. This is the list's
+ * own shape: two lines per row, ragged widths so it reads as text rather than
+ * as a progress bar.
+ */
+export function SkeletonRows({ rows = 4 }: { rows?: number }) {
+  return (
+    <div className="il-skel-rows" aria-busy="true" aria-label="Loading">
+      {Array.from({ length: rows }).map((_, i) => (
+        <div key={i} className="il-skel-row">
+          <Skeleton width={`${52 + ((i * 17) % 32)}%`} height="0.9rem" />
+          <Skeleton width={`${64 + ((i * 11) % 26)}%`} height="0.7rem" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Placeholder for the transcript reader — the search bar, then turns.
+ *
+ * Replaces the words "Loading transcript…", which said the right thing in the
+ * wrong register: a line of prose where a document is about to appear reads as
+ * the answer ("this session's transcript is: Loading transcript…") rather than
+ * as the wait. Turns alternate sides and vary in length, so the pane it stands
+ * in for is recognisable before a word of it has arrived.
+ */
+export function SkeletonTranscript({ turns = 6 }: { turns?: number }) {
+  return (
+    <div className="il-skel-tx" aria-busy="true" aria-label="Loading transcript">
+      <div className="il-skel-tx__bar">
+        <Skeleton width="11rem" height="1.7rem" radius="6px" />
+        <Skeleton width="4.5rem" height="0.75rem" />
+      </div>
+      <div className="il-skel-tx__body">
+        {Array.from({ length: turns }).map((_, i) => (
+          <div key={i} className={`il-skel-tx__turn${i % 2 ? ' il-skel-tx__turn--alt' : ''}`}>
+            <Skeleton width="6.5rem" height="0.7rem" />
+            <Skeleton width={`${94 - ((i * 13) % 34)}%`} height="0.8rem" />
+            {i % 3 !== 0 && <Skeleton width={`${68 - ((i * 9) % 24)}%`} height="0.8rem" />}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
