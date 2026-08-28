@@ -56,6 +56,19 @@ export interface ReviewSession {
   sheet_id: string | null;
   protocol_id: string | null;
   content_json: Record<string, unknown>;
+  /** Seconds of recording behind this note, and seconds the visit was booked for. */
+  recording_seconds: number | null;
+  appointment_seconds: number | null;
+  transcript_chars: number;
+  /**
+   * The recording cannot plausibly be this appointment — a question, not a verdict.
+   *
+   * "Not extracted" catches a session that produced NO note. This catches the
+   * harder one: a fragment that produced a note anyway. A blank note looks blank
+   * the moment you open it; a note built from two minutes of a sixty-minute
+   * booking reads as a session that ran short, and gets approved.
+   */
+  too_short_for_appointment: boolean;
 }
 
 export interface ReviewQueue {
@@ -350,7 +363,10 @@ export type UnprocessedReason =
   | 'needs_review'
   | 'queued'
   | 'running'
+  /** Read end to end, and there was nothing clinical in it. Not a fault. */
   | 'blank'
+  /** Stages dropped and nothing came back from the ones that ran. */
+  | 'unread'
   | 'incomplete';
 
 /**
@@ -380,6 +396,18 @@ export interface UnprocessedSession {
   /** Findings the note does hold — 0 for a blank one. */
   findings: number;
   sheet_id: string | null;
+  /** 1-based place in line, or null when the row is not waiting for a turn:
+   *  it is being read now, parked until the allowance resets, or already
+   *  finished badly and waiting on a person. */
+  queue_position: number | null;
+  /** Tries used, and the ceiling before it stops retrying and asks for help. */
+  attempts: number;
+  max_attempts: number;
+  /** How long the appointment was booked for. */
+  appointment_seconds: number | null;
+  /** The recording is far too short to be the session it is filed against.
+   *  A question for Nicole, never a verdict — nothing acts on it. */
+  too_short_for_appointment: boolean;
 }
 
 /**

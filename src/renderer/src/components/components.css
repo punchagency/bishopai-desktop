@@ -3479,6 +3479,49 @@
   line-height: 1.45;
 }
 
+/* The queue's own status line, above the reasons.
+
+   Quieter than .il-quota-banner on purpose. That one interrupts — it explains
+   why a screen full of rows all failed at once. This one is ambient: it says
+   the queue is moving, which is the normal state, and dressing normal in an
+   accent panel trains the eye to stop reading the panel that isn't. */
+.il-queue-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-2, var(--surface));
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+.il-queue-banner strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Something is happening right now, and nothing else on this screen moves.
+   A session takes minutes to read, so a static "Reading now" is indistinguish-
+   able from a stuck one; the pulse is the only thing saying otherwise. */
+.il-queue-banner__dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  flex: none;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: il-queue-pulse 1.8s ease-in-out infinite;
+}
+@keyframes il-queue-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.8); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .il-queue-banner__dot { animation: none; }
+}
+
 /* These rows carry two lines of explanation rather than one line to scan, so
    they breathe more than a queue row and don't pretend to be clickable. */
 .il-qrow--stack {
@@ -3613,4 +3656,16 @@
 .il-skel-tx__turn--alt {
   border-left-color: color-mix(in srgb, var(--accent) 55%, transparent);
   background: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+
+/* A heuristic observation, not a failure. Amber, not red: the row it sits on is
+   often perfectly fine, and this only asks Nicole to look. Colouring it like an
+   error would train her to dismiss it, which is the one outcome that makes it
+   worse than not being there. */
+.il-qrow__meta--flag,
+.il-meta__flag {
+  color: var(--warning-text, var(--text));
+}
+.il-qrow__meta--flag {
+  font-weight: 500;
 }

@@ -6,7 +6,7 @@ import { fetchConversationDetail, reextractConversation } from '../lib/api';
 import { formatDate } from '../lib/format';
 import { SkeletonTranscript } from '../components/Skeleton';
 import { stageList } from '../lib/errors';
-import { REASONS, durationText, untilText } from '../lib/unprocessed';
+import { REASONS, attemptText, coverageText, durationText, queuePositionText, untilText } from '../lib/unprocessed';
 import type { ConversationDetail, UnprocessedSession } from '../lib/types';
 import { UnmatchedTranscriptViewer } from './UnmatchedDetail';
 
@@ -40,6 +40,8 @@ export function UnprocessedDetail({ backendUrl, row, onClose, onChanged }: Props
   const [busy, setBusy] = useState(false);
   const meaning = REASONS[row.reason];
   const until = untilText(row.next_attempt_at);
+  const position = queuePositionText(row.queue_position);
+  const tried = attemptText(row);
   // Queued and in-flight rows have nothing to ask for; offering a re-run invites
   // a second go at work already underway, on the allowance that is short.
   const canRetry = row.reason !== 'queued' && row.reason !== 'running';
@@ -105,8 +107,41 @@ export function UnprocessedDetail({ backendUrl, row, onClose, onChanged }: Props
           </div>
           <div className="il-meta__row">
             <dt>Recording</dt>
-            <dd>{durationText(row.duration_seconds)} long, saved</dd>
+            <dd>
+              {durationText(row.duration_seconds)} long, saved
+              {row.too_short_for_appointment && (
+                <>
+                  {' '}
+                  <span className="il-meta__flag">
+                    — only {coverageText(row.duration_seconds, row.appointment_seconds)}. This may
+                    be a fragment of another recording rather than this session.
+                  </span>
+                </>
+              )}
+            </dd>
           </div>
+          {(position || tried) && (
+            <div className="il-meta__row">
+              <dt>Queue</dt>
+              <dd>
+                {position ?? 'Not in line'}
+                {/* Only ever shown once the ladder is visibly not working —
+                    see attemptText. A try count on a healthy session reads as
+                    a problem where there is none. */}
+                {tried && <> · {tried.toLowerCase()}</>}
+              </dd>
+            </div>
+          )}
+          {/* For a note with no findings at all, this is the only place the
+              scale of the failure is stated. The findings row below never
+              renders at zero, so 'unread' had a badge saying the reading failed
+              and nothing anywhere saying how much of it did. */}
+          {row.findings === 0 && row.partial.length > 0 && (
+            <div className="il-meta__row">
+              <dt>Not read</dt>
+              <dd>{stageList(row.partial)}</dd>
+            </div>
+          )}
           {row.findings > 0 && (
             <div className="il-meta__row">
               <dt>Note so far</dt>

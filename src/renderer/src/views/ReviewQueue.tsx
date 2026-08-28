@@ -19,6 +19,7 @@ import { ConnectionError } from '../components/ConnectionError';
 import { UnprocessedPanel } from './UnprocessedPanel';
 import { UnprocessedDetail } from './UnprocessedDetail';
 import { allowSampleData } from '../lib/preview';
+import { coverageText } from '../lib/unprocessed';
 
 // Sample data so the dashboard renders standalone when the backend isn't up
 // (design preview / offline). Replaced by live data the moment /review/queue
@@ -35,6 +36,10 @@ const SAMPLE: Queue = {
       sheet_id: 'sample-1',
       protocol_id: 'sample-2',
       content_json: {},
+      recording_seconds: 3000,
+      appointment_seconds: 3600,
+      transcript_chars: 16882,
+      too_short_for_appointment: false,
     },
   ],
 };
@@ -223,6 +228,7 @@ export function ReviewQueue({
         active={selected?.appointmentId === sn.appointment_id}
         approving={pending === sn.appointment_id}
         canApprove={scope === 'pending'}
+        warning={sessionWarning(sn)}
         onOpen={() =>
           setSelected({
             kind,
@@ -257,7 +263,12 @@ export function ReviewQueue({
               // unknown is the same class of wrong answer the list had.
               <Skeleton width="13rem" height="0.85rem" />
             ) : scope === 'unprocessed' ? (
-              'Recordings matched to a client that have no readable note yet'
+              // Names the queue rather than the absence. Every matched recording
+              // passes through here on its way to a note, so most of what is in
+              // this list on a good day is simply waiting its turn — describing
+              // it only as "no readable note" made a working queue read as a
+              // list of faults.
+              'Every recording waiting to be read, in the order it will be read'
             ) : (
               searching
                 ? `${total} match${total === 1 ? '' : 'es'} for "${query.trim()}"`
@@ -451,6 +462,28 @@ interface ClientGrouping {
  * client id, falling back to the name so sessions with no client attached don't
  * all collapse into a single "unknown" pile.
  */
+/**
+ * A reason to read this session before approving it, in one line, or null.
+ *
+ * The "Not extracted" tab catches a recording that produced NO note. This is
+ * the other half of that job, and the harder half: a fragment that produced a
+ * note anyway. `classify` on the server stops claiming a row the moment it has
+ * a single finding, so a note built from two minutes of a sixty-minute booking
+ * falls out of that list and arrives HERE, with a client name and a date on it,
+ * reading like a session that simply ran short.
+ *
+ * Phrased as an observation with the numbers in it, not a verdict. A short
+ * consultation is not a wrong one, and the practitioner is the only one who can
+ * tell those apart — so this says what was measured and leaves the conclusion
+ * to her.
+ */
+export function sessionWarning(sn: ReviewSession): string | null {
+  if (!sn.too_short_for_appointment) return null;
+  const coverage = coverageText(sn.recording_seconds, sn.appointment_seconds);
+  if (!coverage) return null;
+  return `Only ${coverage} — check this is the right recording`;
+}
+
 function groupSessions(sessions: ReviewSession[]): ClientGrouping[] {
   const groups = new Map<string, ClientGrouping>();
   for (const sn of sessions) {
@@ -511,7 +544,7 @@ function ClientGroup({
  * in on hover or when the row is the one open.
  */
 function QueueRow({
-  name, kind, date, status, active, approving, canApprove, onOpen, onApprove,
+  name, kind, date, status, active, approving, canApprove, warning, onOpen, onApprove,
 }: {
   name: string;
   kind: string;
@@ -521,6 +554,8 @@ function QueueRow({
   approving: boolean;
   /** Already-approved rows have nothing left to approve. */
   canApprove: boolean;
+  /** A reason to look at this row before approving it, or null. */
+  warning?: string | null;
   onOpen: () => void;
   onApprove: () => void;
 }) {
@@ -536,6 +571,11 @@ function QueueRow({
             {kind}
             {date && ` · ${date}`}
           </span>
+          {/* A second line rather than an icon, because the warning is only
+              useful if it says what is wrong. An unexplained mark on a row next
+              to an Approve button is worse than no mark: it is something to
+              dismiss. */}
+          {warning && <span className="il-qrow__meta il-qrow__meta--flag">{warning}</span>}
         </span>
       </button>
       {canApprove && (

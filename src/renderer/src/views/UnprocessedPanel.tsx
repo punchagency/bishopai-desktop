@@ -5,7 +5,7 @@ import { EmptyState } from '../components/EmptyState';
 import { fetchUnprocessed, reextractConversation } from '../lib/api';
 import { formatDate } from '../lib/format';
 import { stageList } from '../lib/errors';
-import { REASONS, durationText, untilText } from '../lib/unprocessed';
+import { REASONS, attemptText, coverageText, durationText, queuePositionText, untilText } from '../lib/unprocessed';
 import { SkeletonRows } from '../components/Skeleton';
 import type { UnprocessedReason, UnprocessedSession } from '../lib/types';
 
@@ -22,6 +22,13 @@ import type { UnprocessedReason, UnprocessedSession } from '../lib/types';
 // So the rule for everything below: never show an empty note without saying
 // why it is empty, and never say "failed" about a session that is only waiting
 // for tomorrow's allowance.
+//
+// It is now also the queue itself, not just its wreckage. Every matched
+// transcript enters here the moment it is transcribed and leaves when it has a
+// note, so the same list covers "third in line", "being read now", "tried twice
+// and failed" and "waiting for tomorrow's allowance". That is one list because
+// it is one question — where is my note? — and splitting it by which stage of
+// not-having-one a session is in would make Nicole ask it four times.
 
 export function UnprocessedPanel({
   backendUrl,
@@ -93,6 +100,12 @@ export function UnprocessedPanel({
   // column they were in.
   if (!rows) return <SkeletonRows rows={4} />;
 
+  // The row at the front, and the ones behind it. `queue_position` comes from
+  // the backend's own drain query rather than from this list's order, so it
+  // stays true even though the list also holds rows that are not in line at all.
+  const reading = rows.find((r) => r.reason === 'running') ?? null;
+  const waiting = rows.filter((r) => r.queue_position != null);
+
   const waitingOnQuota = rows.filter((r) => r.reason === 'quota');
   // The soonest reset among them — they all park on the same one, but reading it
   // off the data keeps this honest if that ever stops being true.
@@ -123,6 +136,28 @@ export function UnprocessedPanel({
         </div>
       )}
 
+      {/* The queue in one line, above the reasons. Sessions are read one at a
+          time, so "4 waiting" is a wait Nicole can plan around, where four rows
+          each saying "In line" is a list she has to count. */}
+      {(reading || waiting.length > 0) && (
+        <div className="il-queue-banner" role="status">
+          {reading ? (
+            <>
+              <span className="il-queue-banner__dot" aria-hidden="true" />
+              <strong>Reading {reading.client_name ?? 'a session'} now.</strong>
+            </>
+          ) : (
+            <strong>{waiting.length} waiting to be read.</strong>
+          )}{' '}
+          {reading && waiting.length > 0 && (
+            <>
+              {waiting.length} more in line.{' '}
+            </>
+          )}
+          Sessions are read one at a time.
+        </div>
+      )}
+
       {rows.length === 0 ? (
         <div className="il-view__empty">
           {/* Not the review queue's "you're all caught up" — that answers a
@@ -139,6 +174,8 @@ export function UnprocessedPanel({
             const meaning = REASONS[row.reason];
             const waiting = row.reason === 'queued' || row.reason === 'running';
             const until = untilText(row.next_attempt_at);
+            const position = queuePositionText(row.queue_position);
+            const tried = attemptText(row);
             const active = selectedId === row.conversation_id;
             // The row opens the transcript when there is somewhere to open it.
             // Without `onSelect` it stays static text rather than becoming a
@@ -170,6 +207,15 @@ export function UnprocessedPanel({
                       </Badge>
                     </span>
                     <span className="il-qrow__meta">
+                      {/* Place in line leads, when there is one: it is the only
+                          part of this row that answers "when", and everything
+                          after it answers "what". */}
+                      {position && (
+                        <>
+                          <strong>{position}</strong>
+                          {' · '}
+                        </>
+                      )}
                       {formatDate(row.appointment_at ?? row.recorded_at)}
                       {' · '}
                       {/* Say the recording is safe. The instinct on seeing an
@@ -181,15 +227,33 @@ export function UnprocessedPanel({
                       {row.findings > 0 &&
                         ` · ${row.findings} finding${row.findings === 1 ? '' : 's'} found so far`}
                       {until && ` · tries again ${until}`}
+                      {tried && ` · ${tried.toLowerCase()}`}
                     </span>
                     {/* Which parts of the NOTE are missing — not which stages of
-                        the pipeline dropped. Only worth saying when some of it
-                        did land; on a blank note the badge has already said it. */}
-                    {row.reason === 'incomplete' && row.partial.length > 0 && (
-                      <span className="il-qrow__meta">
-                        Missing: {stageList(row.partial)}
+                        the pipeline dropped.
+                        Shown for 'unread' as well as 'incomplete': the badge
+                        says the reading failed, and this says how much of it,
+                        which is the difference between one section lost and the
+                        whole session. Without it the row asserted a scale it had
+                        no way to know. */}
+                    {/* Independent of the reason, and shown in every state.
+                        A recording can be too short AND queued, too short AND
+                        failed, too short AND blank — the badge can only say one
+                        thing, and this is the fact that explains all three. It
+                        is phrased as an observation because it is a heuristic:
+                        a session that ran short is not a wrong one. */}
+                    {row.too_short_for_appointment && (
+                      <span className="il-qrow__meta il-qrow__meta--flag">
+                        Only {coverageText(row.duration_seconds, row.appointment_seconds)} — check
+                        this is the right recording
                       </span>
                     )}
+                    {(row.reason === 'incomplete' || row.reason === 'unread') &&
+                      row.partial.length > 0 && (
+                        <span className="il-qrow__meta">
+                          Missing: {stageList(row.partial)}
+                        </span>
+                      )}
                   </span>
                 </Row>
                 {/* A queued or in-flight row has nothing to ask for — offering
