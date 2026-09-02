@@ -1027,14 +1027,24 @@
   box-shadow: var(--shadow-md);
   width: min(560px, 100%);
   max-height: 90vh;
-  overflow-y: auto;
+  /* Only the step list scrolls. When the whole panel did, the footer went with
+     it and "Take me to the dashboard" — the sole way out — sat below the fold
+     on any window shorter than the content. */
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 .il-onboard__hero {
+  position: relative;
+  flex: none;
   padding: 2rem 2rem 1.25rem;
   text-align: center;
   border-bottom: 1px solid var(--border);
+}
+.il-onboard__close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
 }
 .il-onboard__logo {
   width: 52px;
@@ -1058,6 +1068,9 @@
   max-width: 38ch;
 }
 .il-onboard__steps {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
   padding: 1.25rem 2rem;
   display: flex;
   flex-direction: column;
@@ -1137,6 +1150,7 @@
   margin: 0;
 }
 .il-onboard__foot {
+  flex: none;
   padding: 1.25rem 2rem 1.75rem;
   border-top: 1px solid var(--border);
   display: flex;
@@ -1452,6 +1466,12 @@
   text-align: center;
   color: var(--text-muted);
   font-size: 0.88rem;
+  /* Tall enough to read as the pane it stands in for. At its natural height it
+     was a small box adrift near the top of an otherwise empty column. */
+  min-height: 17rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* A queue row is a line to scan, not a card to read. Name first; everything
@@ -2671,6 +2691,41 @@
 }
 
 /* ── Review queue: "sessions being processed" banner ─────────────────────── */
+/* Sample-data notice — the single "none of this is real" treatment. Louder than
+   .il-processing on purpose: that one reports on real work in flight, this one
+   says the whole screen is invented. */
+/* Templates card, failed load — message plus the retry it was missing. */
+.il-tpl-failed {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+.il-sample {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  margin: 0 0 1.25rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--warning) 45%, transparent);
+  border-left: 3px solid var(--warning);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--warning) 14%, transparent);
+  color: var(--text);
+  font-size: 0.88rem;
+}
+.il-sample__icon {
+  flex: none;
+  display: inline-flex;
+  margin-top: 1px;
+  color: var(--warning);
+}
+.il-sample__text {
+  margin: 0;
+  line-height: 1.5;
+}
+
 .il-processing {
   display: flex;
   align-items: center;
@@ -3313,6 +3368,30 @@
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
 }
+/* Urgent lane — an enquiry waiting on a same-day reply. Warmer and heavier than
+   the ordinary alert: this is the one that used to send itself, so the queue is
+   only an improvement if it is actually seen in time. */
+.il-approval-alert--urgent {
+  background: color-mix(in srgb, var(--danger) 12%, var(--surface));
+  border-color: color-mix(in srgb, var(--danger) 50%, transparent);
+}
+.il-approval-alert--urgent .il-approval-alert__count {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 18%, transparent);
+}
+.il-approval-alert__urgent {
+  font-size: 0.85rem;
+  color: var(--text);
+}
+.il-approvals__group--urgent {
+  padding: 0.75rem 0.9rem;
+  margin-bottom: 1rem;
+  border: 1px solid color-mix(in srgb, var(--danger) 40%, transparent);
+  border-left: 3px solid var(--danger);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+}
+
 .il-approval-alert:hover {
   background: color-mix(in srgb, var(--warning) 18%, var(--surface));
 }

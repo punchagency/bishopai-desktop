@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Modal } from '../components/Modal';
 import { Button } from '../components/Button';
 import {
@@ -77,11 +77,21 @@ export function MatchModal({ backendUrl, conversation, onClose, onMatched }: Pro
       return;
     }
 
+    // Cancelled when the modal closes or the recording changes. These drive
+    // which appointment each segment is assigned to, so a late response landing
+    // over a newer one would pre-select the wrong client on a split.
+    const ctrl = new AbortController();
+
     Promise.all([
-      fetchCandidates(backendUrl, conversation.id).catch(() => ({ appointments: [] })),
-      fetchSegments(backendUrl, conversation.id).catch(() => ({ segments: [], candidates: [], turns: [] })),
+      fetchCandidates(backendUrl, conversation.id, ctrl.signal).catch(() => ({ appointments: [] })),
+      fetchSegments(backendUrl, conversation.id, ctrl.signal).catch(() => ({
+        segments: [],
+        candidates: [],
+        turns: [],
+      })),
     ])
       .then(([candRes, segRes]) => {
+        if (ctrl.signal.aborted) return;
         setTotalTurns(segRes.turns?.length ?? 0);
         const mergedCandidates = segRes.candidates?.length ? segRes.candidates : candRes.appointments;
         setCandidates(mergedCandidates);
@@ -145,7 +155,12 @@ export function MatchModal({ backendUrl, conversation, onClose, onMatched }: Pro
           setMode('multisession');
         }
       })
-      .catch((e) => setError(String(e)));
+      .catch((e) => {
+        if (ctrl.signal.aborted) return;
+        setError(String(e));
+      });
+
+    return () => ctrl.abort();
   }, [backendUrl, conversation.id, isSample]);
 
   useEffect(() => {
@@ -154,7 +169,15 @@ export function MatchModal({ backendUrl, conversation, onClose, onMatched }: Pro
     const t = setTimeout(() => {
       fetchClients(backendUrl, clientQuery, ctrl.signal)
         .then((r) => setClients(r.clients))
-        .catch(() => setClients([]));
+        .catch(() => {
+          // Typing aborts the previous search, so without this every keystroke
+          // could blank the list — and worse, a cancelled request's catch could
+          // land after the newer one's success and wipe a good result. An empty
+          // client list reads as "no such person", which is how a duplicate
+          // client gets created.
+          if (ctrl.signal.aborted) return;
+          setClients([]);
+        });
     }, 200);
     return () => {
       ctrl.abort();
@@ -204,10 +227,21 @@ export function MatchModal({ backendUrl, conversation, onClose, onMatched }: Pro
     });
   };
 
+  // "Re-detect" is a button press rather than an effect, so nothing was
+  // cancelling it: close the modal (or press it twice) with one in flight and
+  // the older response still rewrote the segment list — the turn ranges and
+  // per-segment client assignments a split is built from.
+  const redetectRef = useRef<AbortController | null>(null);
+  useEffect(() => () => redetectRef.current?.abort(), []);
+
   const redetectBoundaries = async () => {
+    redetectRef.current?.abort(); // a second press supersedes the first
+    const ctrl = new AbortController();
+    redetectRef.current = ctrl;
     setBusy(true);
     try {
-      const res = await fetchSegments(backendUrl, conversation.id);
+      const res = await fetchSegments(backendUrl, conversation.id, ctrl.signal);
+      if (ctrl.signal.aborted) return;
       setTotalTurns(res.turns?.length ?? 0);
       const cands: CandidateAppointment[] = res.candidates ?? candidates ?? [];
       const usedIds = new Set<string>();
@@ -242,7 +276,8 @@ export function MatchModal({ backendUrl, conversation, onClose, onMatched }: Pro
     } catch {
       // keep current
     } finally {
-      setBusy(false);
+      // A superseded run must not clear the spinner the live one is showing.
+      if (!ctrl.signal.aborted) setBusy(false);
     }
   };
 

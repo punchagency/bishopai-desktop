@@ -12,6 +12,7 @@ import { HistoryPanel } from '../components/HistoryPanel';
 import type { CheckoutData, CheckoutItem } from '../lib/types';
 import { ConnectionError } from '../components/ConnectionError';
 import { allowSampleData } from '../lib/preview';
+import { SampleDataNotice } from '../components/SampleDataNotice';
 
 // WF2 (§6): the one custom, auditable money flow. Two Nicole actions — approve
 // charge, confirm close — over a unified 5-system view. Charges are dry-run
@@ -146,7 +147,6 @@ export function CheckoutView({ backendUrl, onChanged }: { backendUrl: string; on
           </h1>
           <p className="il-view__sub">
             {awaiting} awaiting approval
-            {offline && <Badge tone="warning">&nbsp;offline preview&nbsp;</Badge>}
             {!offline && !d.quickbooks_configured && (
               <>
                 <Badge tone="neutral">&nbsp;QuickBooks dry-run&nbsp;</Badge>{' '}
@@ -160,7 +160,25 @@ export function CheckoutView({ backendUrl, onChanged }: { backendUrl: string; on
         </div>
       </div>
 
+      {offline && <SampleDataNotice />}
+
       {!offline && <ReconciliationPanel backendUrl={backendUrl} onChanged={onChanged} />}
+
+      {d.checkouts.length > 0 && (
+        <p className="il-systems-legend">
+          Every checkout touches the same five systems:
+          <span className="il-systems-legend__item">
+            <span className="il-system__mark il-system__mark--done" aria-hidden="true">
+              ✓
+            </span>
+            done
+          </span>
+          <span className="il-systems-legend__item">
+            <span className="il-system__mark il-system__mark--pending" aria-hidden="true" />
+            not yet
+          </span>
+        </p>
+      )}
 
       <div className="il-grid">
         {d.checkouts.map((c) => {
@@ -175,8 +193,19 @@ export function CheckoutView({ backendUrl, onChanged }: { backendUrl: string; on
             >
               <div className="il-systems">
                 {systemsFor(c.status).map((s) => (
-                  <span key={s.name} className="il-system" title={`${s.name} — ${s.hint}${s.done ? ' (done)' : ' (pending)'}`}>
-                    <span className={`il-dot il-dot--${s.done ? 'connected' : 'disconnected'}`} /> {s.name}
+                  <span
+                    key={s.name}
+                    className={`il-system il-system--${s.done ? 'done' : 'pending'}`}
+                    title={`${s.name} — ${s.hint}${s.done ? ' (done)' : ' (pending)'}`}
+                  >
+                    <span
+                      className={`il-system__mark il-system__mark--${s.done ? 'done' : 'pending'}`}
+                      aria-hidden="true"
+                    >
+                      {s.done ? '✓' : ''}
+                    </span>
+                    {s.name}
+                    <span className="il-visually-hidden">{s.done ? ' — done' : ' — not yet'}</span>
                   </span>
                 ))}
               </div>

@@ -2,6 +2,7 @@ import { StatusDot } from './StatusDot';
 import { ThemeToggle } from './ThemeToggle';
 import { Button } from './Button';
 import type { PocketStatus } from '../lib/types';
+import emblemUrl from '../assets/emblem.png';
 
 interface TopBarProps {
   pocket: PocketStatus | null;
@@ -50,7 +51,7 @@ export function TopBar({ pocket, backendOnline, onImport }: TopBarProps) {
   return (
     <header className="il-topbar">
       <span className="il-topbar__brand">
-        <img className="il-topbar__logo" src="/emblem.png" alt="Innerlume" />
+        <img className="il-topbar__logo" src={emblemUrl} alt="Innerlume" />
         Innerlume
       </span>
       <div className="il-topbar__spacer" />

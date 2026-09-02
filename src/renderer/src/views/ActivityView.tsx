@@ -8,6 +8,7 @@ import { Badge } from '../components/Badge';
 import type { AuditEvent } from '../lib/types';
 import { ConnectionError } from '../components/ConnectionError';
 import { allowSampleData } from '../lib/preview';
+import { SampleDataNotice } from '../components/SampleDataNotice';
 
 // A category groups related entity types into a filter chip. The value is what
 // the API's ?type= expects; 'all' clears the filter.
@@ -89,10 +90,12 @@ export function ActivityView({ backendUrl }: { backendUrl: string }) {
             </InfoPopover>
           </h1>
           <p className="il-view__sub">
-            Everything that's happened across the practice{offline && ' · offline preview'}
+            Everything that's happened across the practice
           </p>
         </div>
       </div>
+
+      {offline && <SampleDataNotice />}
 
       <div className="il-tabs il-tabs--scope">
         {CATEGORIES.map((c) => (

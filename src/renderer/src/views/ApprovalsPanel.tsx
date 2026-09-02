@@ -78,9 +78,17 @@ export function ApprovalsPanel({
     return c;
   }, [items]);
 
+  // Time-critical items are pulled OUT of the category grouping and shown first.
+  // Grouped by reason they would sit under "new enquiries" among a week of
+  // nudges that can all wait — and these are the ones gone tomorrow.
+  const urgent = useMemo(() => inList.filter((i) => i.priority === 'urgent'), [inList]);
+
   const grouped = useMemo(() => {
     const g = new Map<string, ApprovalItem[]>();
-    for (const i of inList) g.set(i.category, [...(g.get(i.category) ?? []), i]);
+    for (const i of inList) {
+      if (i.priority === 'urgent') continue;
+      g.set(i.category, [...(g.get(i.category) ?? []), i]);
+    }
     return [...g.entries()];
   }, [inList]);
 
@@ -174,6 +182,39 @@ export function ApprovalsPanel({
               Send approved now
             </button>
           </div>
+
+          {urgent.length > 0 && (
+            <section className="il-approvals__group il-approvals__group--urgent">
+              <h3 className="il-approvals__group-title">
+                Needs you today
+                <span className="il-approvals__group-count">{urgent.length}</span>
+              </h3>
+              <p className="il-card__meta">
+                Someone has just written in and is waiting on a reply. These are dropped after a
+                day rather than sent late — a welcome that arrives on Friday for a Tuesday
+                enquiry reads worse than none.
+              </p>
+              {urgent.map((item) => (
+                <ApprovalRow
+                  key={item.id}
+                  item={item}
+                  checked={selected.has(item.id)}
+                  busy={busy}
+                  editing={editing === item.id}
+                  onToggle={() => toggle(item.id)}
+                  onEdit={() => setEditing(editing === item.id ? null : item.id)}
+                  onSave={(subject, body) =>
+                    act(async () => {
+                      await updateApproval(backendUrl, item.id, subject, body);
+                      setEditing(null);
+                    })
+                  }
+                  onApprove={() => act(() => approveEmails(backendUrl, [item.id]))}
+                  onReject={() => act(() => rejectEmails(backendUrl, [item.id]))}
+                />
+              ))}
+            </section>
+          )}
 
           {grouped.map(([category, rows]) => (
             <section key={category} className="il-approvals__group">

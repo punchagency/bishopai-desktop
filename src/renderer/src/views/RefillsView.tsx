@@ -10,6 +10,7 @@ import { EmptyState } from '../components/EmptyState';
 import type { RefillDigest, RefillItem, RefillTier, RefillSendResponse } from '../lib/types';
 import { ConnectionError } from '../components/ConnectionError';
 import { allowSampleData } from '../lib/preview';
+import { SampleDataNotice } from '../components/SampleDataNotice';
 
 // WF4: refill reminders timed off each supplement's run-out (projected nightly
 // from dose × qty × start date). Nicole's daily digest — snooze, skip, or
@@ -137,7 +138,6 @@ export function RefillsView({ backendUrl, onChanged }: { backendUrl: string; onC
               <strong>Overdue</strong> — the supply has run out. <strong>Soon</strong> — running low
               (within ~2 weeks). <strong>Coming</strong> — plenty left; shown for context, not yet due.
             </InfoPopover>
-            {offline && <Badge tone="warning">&nbsp;offline preview&nbsp;</Badge>}
             {!offline && !d.fullscript_configured && (
               <>
                 <Badge tone="neutral">&nbsp;Outlook dry-run&nbsp;</Badge>{' '}
@@ -153,6 +153,8 @@ export function RefillsView({ backendUrl, onChanged }: { backendUrl: string; onC
           {sending ? 'Sending…' : `Send ${dueCount} email reminders`}
         </Button>
       </div>
+
+      {offline && <SampleDataNotice />}
 
       {result && (
         <div className="il-refill-result">

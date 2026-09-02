@@ -72,14 +72,20 @@ export function ReviewDetail({ backendUrl, kind, id, clientName, onClose, onChan
   const isSample = id.startsWith('sample-');
   const isApproved = status === 'approved';
 
-  const loadPreview = () => {
+  const loadPreview = (signal?: AbortSignal) => {
     if (isSample) {
       setMarkdown('_Preview needs a running backend — this is offline sample data._');
       return;
     }
-    fetchRendered(backendUrl, kind, id)
-      .then((r) => setMarkdown(r.markdown))
-      .catch((e) => setError(String(e)));
+    fetchRendered(backendUrl, kind, id, signal)
+      .then((r) => {
+        if (signal?.aborted) return;
+        setMarkdown(r.markdown);
+      })
+      .catch((e) => {
+        if (signal?.aborted) return;
+        setError(String(e));
+      });
   };
 
   useEffect(() => {
@@ -89,8 +95,21 @@ export function ReviewDetail({ backendUrl, kind, id, clientName, onClose, onChan
       return;
     }
     setLoadFailed(false);
-    fetchItem(backendUrl, kind, id)
+
+    // Cancelled when the selected document changes.
+    //
+    // `id` is a dependency, so switching sessions re-runs this effect while the
+    // previous one's requests are still in flight. Unguarded, the older response
+    // wrote into the newer session's screen: A's clinical note under B's header,
+    // with savedNoteRef seeded from A. The next keystroke then makes the
+    // auto-save below fire a PATCH of A's content at B's id — one client's
+    // findings written onto another's chart, which every later check would
+    // accept because the note itself is well-formed.
+    const ctrl = new AbortController();
+
+    fetchItem(backendUrl, kind, id, ctrl.signal)
       .then((row) => {
+        if (ctrl.signal.aborted) return;
         setNote(row.content_json);
         savedNoteRef.current = JSON.stringify(row.content_json);
         setAutoSaveState('idle');
@@ -99,24 +118,48 @@ export function ReviewDetail({ backendUrl, kind, id, clientName, onClose, onChan
         setUnmatchBlocked(row.unmatch_blocked_reason ?? null);
       })
       .catch((e) => {
+        if (ctrl.signal.aborted) return;
         setError(String(e));
         setLoadFailed(true);
       });
-    loadPreview();
-    fetchReviewContext(backendUrl, kind, id)
-      .then(setContext)
-      .catch(() => setContext(null)); // comparison panels just show less — never block the review
-    fetchRevisions(backendUrl, kind, id)
-      .then((r) => setRevisions(r.revisions))
-      .catch(() => setRevisions([]));
-    setHistoryLoading(true);
-    fetchSessionHistory(backendUrl, kind, id)
+    loadPreview(ctrl.signal);
+    fetchReviewContext(backendUrl, kind, id, ctrl.signal)
+      .then((c) => {
+        if (ctrl.signal.aborted) return;
+        setContext(c);
+      })
+      .catch(() => {
+        // comparison panels just show less — never block the review
+        if (ctrl.signal.aborted) return;
+        setContext(null);
+      });
+    fetchRevisions(backendUrl, kind, id, ctrl.signal)
       .then((r) => {
+        if (ctrl.signal.aborted) return;
+        setRevisions(r.revisions);
+      })
+      .catch(() => {
+        if (ctrl.signal.aborted) return;
+        setRevisions([]);
+      });
+    setHistoryLoading(true);
+    fetchSessionHistory(backendUrl, kind, id, ctrl.signal)
+      .then((r) => {
+        if (ctrl.signal.aborted) return;
         setHistory(r.sessions);
         setHistoryTotal(r.total);
       })
-      .catch(() => setHistory([]))
-      .finally(() => setHistoryLoading(false));
+      .catch(() => {
+        if (ctrl.signal.aborted) return;
+        setHistory([]);
+      })
+      .finally(() => {
+        // A superseded load must not clear the spinner the live one is showing.
+        if (ctrl.signal.aborted) return;
+        setHistoryLoading(false);
+      });
+
+    return () => ctrl.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [backendUrl, kind, id]);
 

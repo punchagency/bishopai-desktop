@@ -24,9 +24,16 @@ function trayImage() {
     return img;
   }
   // Linux (Cinnamon/GTK) renders the tray at ~22px+ and downscales a large PNG,
-  // so it can carry the REAL emblem. Windows draws it at 16px where the emblem
-  // mushes — keep the bold vector mark there.
-  const file = process.platform === 'linux' ? 'tray-linux.png' : 'tray.png';
+  // so it gets the 256px source. Windows draws it at 16px, where a downscale
+  // mushes — keep the exact-size tile there.
+  //
+  // This pointed at 'tray-linux.png', which scripts/make-icons.mjs does not
+  // generate: it was a hand-made 22x22 stub of ONE colour, rgba(180,80,50) edge
+  // to edge. Not a bad rendering of the mark — no mark at all. On Cinnamon's
+  // panel that is the brown square. 'tray-large.png' is the file the generator
+  // actually writes for this purpose ("Linux tray: large source the panel
+  // downscales cleanly"), so use it and let the stub go.
+  const file = process.platform === 'linux' ? 'tray-large.png' : 'tray.png';
   const img = nativeImage.createFromPath(join(dir, file));
   return img;
 }

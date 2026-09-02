@@ -1,5 +1,5 @@
 {
-  "backendUrl": "http://localhost:3000",
-  "_productionBackendUrl": "https://innerlume-server-production.up.railway.app",
-  "_note": "Pointed to local backend server."
+  "backendUrl": "https://innerlume-server-production.up.railway.app",
+  "_localBackendUrl": "http://localhost:3000",
+  "_note": "Pointed at the hosted Railway backend. Swap backendUrl with _localBackendUrl to go back to a local server; INNERLUME_BACKEND_URL overrides both at runtime."
 }

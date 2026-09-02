@@ -297,15 +297,32 @@ export function EmailTemplatesCard({
         setLoading(false);
         return Promise.resolve();
       }
+      setLoading(true);
       return fetchEmailTemplates(backendUrl, signal)
-        .then((d) => setTemplates(d.templates))
+        .then((d) => {
+          setTemplates(d.templates);
+          // Clear a previous failure. Without this the error survived its own
+          // fix: a later load succeeded, the templates were in state, and the
+          // card went on showing "couldn't load" because the render checks
+          // `failed` before it checks the data.
+          setFailed(false);
+        })
         .catch(() => {
+          // An aborted request is not a failed one. The effect aborts in its
+          // cleanup, so any dependency change mid-flight — the backend URL
+          // resolving, `offline` settling — landed here and painted a
+          // connection error over a request nobody was waiting for any more.
+          // Every other view in the app already guards this; this one didn't.
+          if (signal?.aborted) return;
           // Against a real backend, template copy she never wrote must not
           // appear as hers — she can edit and send from this card.
           if (allowSampleData(backendUrl)) setTemplates((prev) => prev || SAMPLE_TEMPLATES);
           else setFailed(true);
         })
-        .finally(() => setLoading(false));
+        .finally(() => {
+          if (signal?.aborted) return;
+          setLoading(false);
+        });
     },
     [backendUrl, offline],
   );
@@ -338,7 +355,18 @@ export function EmailTemplatesCard({
       {loading ? (
         <p className="il-card__meta">Loading templates…</p>
       ) : failed ? (
-        <p className="il-card__meta">Couldn't load your templates — check your connection and reopen this card.</p>
+        // Says what failed and offers the way out. The old copy blamed the
+        // connection and told her to "reopen this card" — but the rest of the
+        // screen had loaded fine, and the embedded card has no toggle to reopen.
+        <div className="il-tpl-failed">
+          <p className="il-card__meta">
+            Couldn't load your email templates. The rest of this screen loaded, so this is
+            usually the server being briefly busy rather than your connection.
+          </p>
+          <Button variant="secondary" onClick={() => void load()}>
+            Try again
+          </Button>
+        </div>
       ) : !templates || templates.length === 0 ? (
         <p className="il-card__meta">No templates found.</p>
       ) : (

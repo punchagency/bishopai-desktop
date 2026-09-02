@@ -27,6 +27,7 @@ import type { EngagementData, EngagementLead, LeadActivityItem, QueueItem, SentE
 import { ApprovalsPanel } from './ApprovalsPanel';
 import { ConnectionError } from '../components/ConnectionError';
 import { allowSampleData } from '../lib/preview';
+import { SampleDataNotice } from '../components/SampleDataNotice';
 
 // WF3: lead re-engagement + site activity. Four tabs:
 //   Leads     — status + inline pending subject; customize upcoming email or view history
@@ -779,7 +780,6 @@ export function EngagementView({ backendUrl, onChanged }: { backendUrl: string; 
           </h1>
           <p className="il-view__sub">
             {d.leads.length} lead{d.leads.length === 1 ? '' : 's'} · {dueCount} with a step due
-            {offline && <Badge tone="warning">&nbsp;offline preview&nbsp;</Badge>}
             {!offline && !d.outlook_configured && <Badge tone="neutral">&nbsp;Outlook dry-run&nbsp;</Badge>}
           </p>
         </div>
@@ -787,6 +787,8 @@ export function EngagementView({ backendUrl, onChanged }: { backendUrl: string; 
           {running ? 'Running…' : 'Run cadence now'}
         </Button>
       </div>
+
+      {offline && <SampleDataNotice />}
 
       <div className="il-stats">
         <StatCard

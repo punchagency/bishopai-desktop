@@ -118,7 +118,15 @@ export function ImportView({
     const t = setTimeout(() => {
       fetchClients(backendUrl, query, ctrl.signal)
         .then((r) => setClients(r.clients))
-        .catch(() => setClients([]));
+        .catch(() => {
+          // Typing aborts the previous search, so without this every keystroke
+          // could blank the list — and worse, a cancelled request's catch could
+          // land after the newer one's success and wipe a good result. An empty
+          // client list reads as "no such person", which is how a duplicate
+          // client gets created.
+          if (ctrl.signal.aborted) return;
+          setClients([]);
+        });
     }, 200);
     return () => {
       ctrl.abort();

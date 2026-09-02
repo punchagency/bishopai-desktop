@@ -866,10 +866,14 @@ export type ApprovalCategory =
   | 'protocol'
   | 'cancelled';
 
+/** How fast this one needs a decision. See server outbound/policy.ts. */
+export type ApprovalPriority = 'urgent' | 'normal';
+
 export interface ApprovalItem {
   id: string;
   list: ApprovalList;
   category: ApprovalCategory;
+  priority: ApprovalPriority;
   lead_id: string | null;
   client_id: string | null;
   to_email: string;
@@ -887,8 +891,12 @@ export interface ApprovalItem {
 
 export interface ApprovalSummary {
   total: number;
+  /** Pending AND time-critical — expires in a day, so it leads the alert. */
+  urgent: number;
   byList: Record<string, number>;
   byCategory: Record<string, number>;
   /** Oldest pending item's due date — how long something has been waiting. */
   oldestSendAfter: string | null;
+  /** When the soonest pending item stops being sendable. */
+  nextExpiresAt: string | null;
 }

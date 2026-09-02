@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Card } from '../components/Card';
-import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { approveItem, fetchReviewQueue } from '../lib/api';
 import { formatDate, humanize } from '../lib/format';
@@ -20,29 +19,8 @@ import { UnprocessedPanel } from './UnprocessedPanel';
 import { UnprocessedDetail } from './UnprocessedDetail';
 import { allowSampleData } from '../lib/preview';
 import { coverageText } from '../lib/unprocessed';
-
-// Sample data so the dashboard renders standalone when the backend isn't up
-// (design preview / offline). Replaced by live data the moment /review/queue
-// responds.
-const SAMPLE: Queue = {
-  sessions: [
-    {
-      appointment_id: 'sample-appt-1',
-      client_id: 'c1',
-      client_name: 'Jane Doe',
-      starts_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      status: 'draft',
-      sheet_id: 'sample-1',
-      protocol_id: 'sample-2',
-      content_json: {},
-      recording_seconds: 3000,
-      appointment_seconds: 3600,
-      transcript_chars: 16882,
-      too_short_for_appointment: false,
-    },
-  ],
-};
+import { SampleDataNotice } from '../components/SampleDataNotice';
+import { SAMPLE_APPROVED_SESSIONS, SAMPLE_PENDING_SESSIONS } from '../lib/sampleData';
 
 /** Which list the Sessions view is showing. */
 type Scope = 'pending' | 'approved' | 'unprocessed';
@@ -130,7 +108,11 @@ export function ReviewQueue({
         .catch((err: Error) => {
           if (signal?.aborted) return;
           if (allowSampleData(backendUrl)) {
-            setQueue(SAMPLE);
+            // The Approved tab must never preview an unapproved draft: the two lists
+            // mean different things and sharing one fixture said they don't.
+            setQueue({
+              sessions: scope === 'approved' ? SAMPLE_APPROVED_SESSIONS : SAMPLE_PENDING_SESSIONS,
+            });
             setOffline(true);
           } else {
             setUnreachable(err.message);
@@ -276,12 +258,11 @@ export function ReviewQueue({
                   ? `${total} item${total === 1 ? '' : 's'} awaiting your approval`
                   : `${total} approved item${total === 1 ? '' : 's'}`
             )}
-            {offline && scope !== 'unprocessed' && (
-              <Badge tone="warning">&nbsp;offline preview&nbsp;</Badge>
-            )}
           </p>
         </div>
       </div>
+
+      {offline && scope !== 'unprocessed' && <SampleDataNotice />}
 
       <div className="il-tabs il-tabs--scope">
         <button

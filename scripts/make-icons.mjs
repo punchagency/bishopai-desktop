@@ -84,7 +84,24 @@ async function emblemTile(size) {
   return sharp(tile).composite([{ input: inner, gravity: 'center' }]).png();
 }
 await (await emblemTile(256)).toFile(`${OUT}/emblem.png`); // window/taskbar icon
-await (await emblemTile(128)).toFile('public/emblem.png'); // in-app header mark
+
+// Linux desktop-entry icon set.
+//
+// The panel does NOT read the icon off the window: Electron's BrowserWindow
+// `icon` option and setIcon() both leave _NET_WM_ICON empty on X11 here
+// (verified with xprop), so Cinnamon resolves the window to its .desktop entry
+// via StartupWMClass and then looks that entry's Icon= name up in the icon
+// theme. A theme lookup only finds files under hicolor/<w>x<h>/apps, so the
+// icon has to ship as a SIZED SET — handed a single PNG, electron-builder
+// installed it to hicolor/0x0/apps, which nothing can ever find.
+await mkdir(`${OUT}/icons`, { recursive: true });
+for (const n of [16, 24, 32, 48, 64, 128, 256, 512]) {
+  await (await emblemTile(n)).toFile(`${OUT}/icons/${n}x${n}.png`);
+}
+await (await emblemTile(128)).toFile('src/renderer/src/assets/emblem.png'); // in-app header mark
+// NOT public/: publicDir assets are referenced by a root-absolute '/emblem.png',
+// which resolves to the filesystem root under Electron's file:// renderer and
+// 404s in every packaged build. Importing it lets Vite emit a relative URL.
 
 // Simplified mark — rounded terracotta tile + bold cream mortar & pestle.
 const tileSvg = `

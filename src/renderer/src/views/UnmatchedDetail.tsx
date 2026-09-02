@@ -326,12 +326,17 @@ export function UnmatchedDetail({ backendUrl, conversation, onClose, onMatched }
       });
 
     setSessionTurns([]);
-    fetchSegments(backendUrl, conversation.id)
+    // Shares the controller above. Without a signal this request outlived the
+    // recording it belonged to: open A, switch to B, and A's segments — the
+    // turn ranges a split is built from — could land over B's.
+    fetchSegments(backendUrl, conversation.id, ctrl.signal)
       .then((r) => {
+        if (ctrl.signal.aborted) return;
         setSegments(r.segments);
         setSessionTurns(r.turns ?? []);
       })
       .catch(() => {
+        if (ctrl.signal.aborted) return;
         setSegments([]);
         setSessionTurns([]);
       });

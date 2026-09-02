@@ -15,15 +15,8 @@ import type {
   TaskStatus,
   ViewKey,
 } from '../lib/types';
-
-const SAMPLE: OverviewData = {
-  stats: { awaiting_review: 2, unmatched: 2, upcoming: 3, approved_today: 1 },
-  recent_activity: [
-    { ts: new Date().toISOString(), kind: 'conversation', text: 'Recording matched to an appointment' },
-    { ts: new Date().toISOString(), kind: 'draft', text: 'Session note drafted for Maya Chen' },
-  ],
-  upcoming: [{ starts_at: new Date().toISOString(), status: 'confirmed', client_name: 'Maya Chen' }],
-};
+import { SampleDataNotice } from '../components/SampleDataNotice';
+import { SAMPLE_OVERVIEW } from '../lib/sampleData';
 
 interface Props {
   backendUrl: string;
@@ -48,7 +41,7 @@ export function Overview({ backendUrl, pocket, onNavigate }: Props) {
       .catch((err: Error) => {
         if (ctrl.signal.aborted) return;
         if (allowSampleData(backendUrl)) {
-          setData(SAMPLE);
+          setData(SAMPLE_OVERVIEW);
           setOffline(true);
         } else {
           setUnreachable(err.message);
@@ -58,7 +51,7 @@ export function Overview({ backendUrl, pocket, onNavigate }: Props) {
   }, [backendUrl]);
 
   // Never paint SAMPLE while the first fetch is in flight. `data` is set on
-  // success AND on failure (failure substitutes SAMPLE and raises `offline`),
+  // success AND on failure (failure substitutes the sample and raises `offline`),
   // so a null here means "still loading" and nothing else. Rendering the
   // sample in that window showed Nicole invented clients with no offline
   // badge to mark them — indistinguishable from her real queue.
@@ -104,9 +97,11 @@ export function Overview({ backendUrl, pocket, onNavigate }: Props) {
       <div className="il-view__head">
         <div>
           <h1 className="il-view__title">Overview</h1>
-          <p className="il-view__sub">Your practice at a glance{offline && ' · offline preview'}</p>
+          <p className="il-view__sub">Your practice at a glance</p>
         </div>
       </div>
+
+      {offline && <SampleDataNotice />}
 
       {/* Above the stats, because it is the one thing on this page that is about
           to happen TO someone else. Everything below is work waiting for Nicole;
@@ -161,7 +156,12 @@ function TasksCard({ backendUrl }: { backendUrl: string }) {
     const ctrl = new AbortController();
     fetchTasks(backendUrl, ctrl.signal)
       .then((r) => setTasks(r.tasks))
-      .catch(() => setTasks([]));
+      .catch(() => {
+        // [] renders "Nothing outstanding", which is an answer. An aborted
+        // request has no answer to give.
+        if (ctrl.signal.aborted) return;
+        setTasks([]);
+      });
     return () => ctrl.abort();
   }, [backendUrl]);
 
@@ -279,7 +279,12 @@ function EmailRemindersCard({ backendUrl }: { backendUrl: string }) {
     const ctrl = new AbortController();
     fetchUpcomingReminders(backendUrl, 30, ctrl.signal)
       .then((r) => setReminders(r.reminders))
-      .catch(() => setReminders([]));
+      .catch(() => {
+        // Same: [] renders "Nothing queued to send in the next 30 days" — a
+        // claim about outbound mail that a cancelled request cannot support.
+        if (ctrl.signal.aborted) return;
+        setReminders([]);
+      });
     return () => ctrl.abort();
   }, [backendUrl]);
 

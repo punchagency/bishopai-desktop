@@ -18,6 +18,14 @@ const CATEGORY_LABEL: Record<string, string> = {
   cancelled: 'cancelled bookings',
 };
 
+/** Whole hours until an instant, floored at 0. Null when there's nothing to time. */
+function hoursUntil(iso: string | null): number | null {
+  if (!iso) return null;
+  const ms = Date.parse(iso) - Date.now();
+  if (!Number.isFinite(ms)) return null;
+  return Math.max(0, Math.floor(ms / 3_600_000));
+}
+
 /** Whole days something has been waiting, or null if it isn't due yet. */
 function daysWaiting(oldest: string | null): number | null {
   if (!oldest) return null;
@@ -42,13 +50,26 @@ export function ApprovalAlert({
     const ctrl = new AbortController();
     fetchApprovalSummary(backendUrl, ctrl.signal)
       .then(setSummary)
-      .catch(() => setSummary(null));
+      .catch(() => {
+        // An abort is not an empty queue. This component renders nothing when
+        // `summary` is null, so treating a cancelled request as a failure made
+        // the alert silently disappear — and a queue nobody can see is just a
+        // slower way of never sending.
+        if (ctrl.signal.aborted) return;
+        setSummary(null);
+      });
     return () => ctrl.abort();
   }, [backendUrl, offline]);
 
   if (!summary || summary.total === 0) return null;
 
   const waited = daysWaiting(summary.oldestSendAfter);
+  // A new enquiry's reply is only worth sending today, so it is the one thing
+  // this alert leads with rather than folding into a total. Before the approval
+  // gate covered it, this email sent itself; the queue is only an improvement if
+  // she actually sees it in time.
+  const urgent = summary.urgent ?? 0;
+  const urgentHours = urgent > 0 ? hoursUntil(summary.nextExpiresAt) : null;
   const cancelled = summary.byList.cancelled ?? 0;
   const normal = summary.byList.normal ?? 0;
   // Ordered biggest-first: with a week's worth queued, the useful sentence is
@@ -61,14 +82,31 @@ export function ApprovalAlert({
   return (
     <button
       type="button"
-      className="il-approval-alert"
+      className={`il-approval-alert${urgent > 0 ? ' il-approval-alert--urgent' : ''}`}
       onClick={() => onNavigate('engagement')}
     >
       <span className="il-approval-alert__count">{summary.total}</span>
       <span className="il-approval-alert__text">
         <strong>
-          {summary.total === 1 ? 'email is' : 'emails are'} waiting for your approval
+          {urgent > 0 ? (
+            <>
+              {urgent} {urgent === 1 ? 'reply needs' : 'replies need'} you today
+              {summary.total > urgent && ` · ${summary.total - urgent} can wait`}
+            </>
+          ) : (
+            <>{summary.total === 1 ? 'email is' : 'emails are'} waiting for your approval</>
+          )}
         </strong>
+        {urgent > 0 && (
+          <span className="il-approval-alert__urgent">
+            Someone has just written in.{' '}
+            {urgentHours !== null &&
+              (urgentHours >= 1
+                ? `Dropped in ${urgentHours} hour${urgentHours === 1 ? '' : 's'} if not approved`
+                : 'Dropped within the hour if not approved')}
+            {' '}— a welcome that lands days late reads worse than none.
+          </span>
+        )}
         <span className="il-approval-alert__detail">
           {normal > 0 && `${normal} normal`}
           {normal > 0 && cancelled > 0 && ' · '}

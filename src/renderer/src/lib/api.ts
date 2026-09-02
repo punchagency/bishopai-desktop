@@ -191,8 +191,9 @@ export function fetchUnmatchedDetail(
 export function fetchCandidates(
   backendUrl: string,
   id: string,
+  signal?: AbortSignal,
 ): Promise<{ appointments: CandidateAppointment[] }> {
-  return json(`${backendUrl}/review/unmatched/${id}/candidates`);
+  return json(`${backendUrl}/review/unmatched/${id}/candidates`, { signal });
 }
 
 export interface SessionSegment {
@@ -222,13 +223,14 @@ export interface SessionTurn {
 export function fetchSegments(
   backendUrl: string,
   id: string,
+  signal?: AbortSignal,
 ): Promise<{
   conversation_id: string;
   segments: SessionSegment[];
   candidates: CandidateAppointment[];
   turns: SessionTurn[];
 }> {
-  return json(`${backendUrl}/review/unmatched/${id}/segments`);
+  return json(`${backendUrl}/review/unmatched/${id}/segments`, { signal });
 }
 
 /** Split a multi-session recording into separate child session conversations. */
@@ -285,18 +287,33 @@ interface ItemRow {
 }
 
 /** Full row (with content_json) for one sheet/protocol. */
-export function fetchItem(backendUrl: string, kind: ReviewKind, id: string): Promise<ItemRow> {
-  return json<ItemRow>(`${backendUrl}/review/${kind}/${id}`);
+export function fetchItem(
+  backendUrl: string,
+  kind: ReviewKind,
+  id: string,
+  signal?: AbortSignal,
+): Promise<ItemRow> {
+  return json<ItemRow>(`${backendUrl}/review/${kind}/${id}`, { signal });
 }
 
 /** Server-rendered Markdown of the document as it stands. */
-export function fetchRendered(backendUrl: string, kind: ReviewKind, id: string): Promise<{ markdown: string }> {
-  return json<{ markdown: string }>(`${backendUrl}/review/${kind}/${id}/render`);
+export function fetchRendered(
+  backendUrl: string,
+  kind: ReviewKind,
+  id: string,
+  signal?: AbortSignal,
+): Promise<{ markdown: string }> {
+  return json<{ markdown: string }>(`${backendUrl}/review/${kind}/${id}/render`, { signal });
 }
 
 /** The client's prior approved note + running supplement plan, for comparison. */
-export function fetchReviewContext(backendUrl: string, kind: ReviewKind, id: string): Promise<ReviewContext> {
-  return json<ReviewContext>(`${backendUrl}/review/${kind}/${id}/context`);
+export function fetchReviewContext(
+  backendUrl: string,
+  kind: ReviewKind,
+  id: string,
+  signal?: AbortSignal,
+): Promise<ReviewContext> {
+  return json<ReviewContext>(`${backendUrl}/review/${kind}/${id}/context`, { signal });
 }
 
 /** Save edits to content_json (and/or status). */
@@ -347,9 +364,11 @@ export function fetchSessionHistory(
   backendUrl: string,
   kind: ReviewKind,
   id: string,
+  signal?: AbortSignal,
 ): Promise<{ total: number; sessions: PriorNote[] }> {
   return json<{ total: number; sessions: PriorNote[] }>(
     `${backendUrl}/review/${kind}/${id}/history`,
+    { signal },
   );
 }
 
@@ -441,9 +460,11 @@ export async function fetchRevisions(
   backendUrl: string,
   kind: ReviewKind,
   id: string,
+  signal?: AbortSignal,
 ): Promise<{ revisions: NoteRevision[] }> {
   const r = await json<{ revisions: NoteRevision[] }>(
     `${backendUrl}/review/${kind}/${id}/revisions`,
+    { signal },
   );
   return { revisions: (r.revisions ?? []).filter((v) => v.reason !== DRAFT_REPLACED_REASON) };
 }

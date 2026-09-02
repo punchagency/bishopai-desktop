@@ -1,8 +1,16 @@
-import React from 'react';
-import { Button } from '../components/Button';
-import { StatusDot } from '../components/StatusDot';
-import type { PocketStatus } from '../lib/types';
-import { IconMic, IconCalendar, IconFolder, IconMail, IconCreditCard, IconCheck } from '../components/Icons';
+import React, { useEffect } from "react";
+import { Button } from "../components/Button";
+import { StatusDot } from "../components/StatusDot";
+import type { PocketStatus } from "../lib/types";
+import {
+  IconMic,
+  IconCalendar,
+  IconFolder,
+  IconMail,
+  IconCreditCard,
+  IconCheck,
+} from "../components/Icons";
+import emblemUrl from "../assets/emblem.png";
 
 interface Step {
   id: string;
@@ -10,7 +18,7 @@ interface Step {
   title: string;
   body: string;
   action?: { label: string; onClick: () => void };
-  state: 'done' | 'pending' | 'waiting';
+  state: "done" | "pending" | "waiting";
   waitingNote?: string;
 }
 
@@ -20,84 +28,116 @@ interface Props {
 }
 
 export function Onboarding({ pocket, onDismiss }: Props) {
+  // Escape, a click on the scrim and the ✕ all dismiss. This panel predates
+  // components/Modal.tsx and had none of the three: the only way out was the
+  // footer button, which scrolled off the bottom on a short window.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onDismiss();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onDismiss]);
+
   // Nothing for Nicole to click: Pocket sends recordings to the server, so this
   // step is a report on setup done elsewhere, not an action she takes here.
   const pocketReady = !!pocket?.healthy;
 
   const steps: Step[] = [
     {
-      id: 'pocket',
+      id: "pocket",
       icon: <IconMic size={24} />,
-      title: 'Pocket Recorder',
-      body: 'Your Pocket recorder captures each client session and sends it straight to Innerlume, where it becomes a draft clinical note for you to review — saving you hours of writing.',
-      state: pocketReady ? 'done' : 'waiting',
+      title: "Pocket Recorder",
+      body: "Your Pocket recorder captures each client session and sends it straight to Innerlume, where it becomes a draft clinical note for you to review — saving you hours of writing.",
+      state: pocketReady ? "done" : "waiting",
       waitingNote: pocketReady
         ? undefined
-        : 'Richmond is connecting your Pocket account — nothing for you to do.',
+        : "Richmond is connecting your Pocket account — nothing for you to do.",
     },
     {
-      id: 'pb',
+      id: "pb",
       icon: <IconCalendar size={24} />,
-      title: 'Practice Better Calendar & Records',
+      title: "Practice Better Calendar & Records",
       body: "Connects with your Practice Better account to sync your schedule, auto-update patient records, and check for open availability times when clients need to book their next appointment.",
-      state: 'waiting',
-      waitingNote: 'Richmond is finalizing this connection — nothing for you to do.',
+      state: "waiting",
+      waitingNote:
+        "Richmond is finalizing this connection — nothing for you to do.",
     },
     {
-      id: 'drive',
+      id: "drive",
       icon: <IconFolder size={24} />,
-      title: 'Secure Google Drive Folder',
+      title: "Secure Google Drive Folder",
       body: "Draft notes and treatment protocols are automatically saved to your shared Google Drive folder as soon as you approve them, keeping everything tidy and organized.",
-      state: 'waiting',
-      waitingNote: 'Richmond is setting this up — nothing for you to do.',
+      state: "waiting",
+      waitingNote: "Richmond is setting this up — nothing for you to do.",
     },
     {
-      id: 'outlook',
+      id: "outlook",
       icon: <IconMail size={24} />,
-      title: 'Automated Client Re-engagement',
+      title: "Automated Client Re-engagement",
       body: "Connects with your Outlook to automatically email patients who are due for a check-in. It suggests open slots from your schedule as simple, one-click booking links.",
-      state: 'waiting',
-      waitingNote: 'Richmond is configuring the email setup — nothing for you to do.',
+      state: "waiting",
+      waitingNote:
+        "Richmond is configuring the email setup — nothing for you to do.",
     },
     {
-      id: 'qb',
+      id: "qb",
       icon: <IconCreditCard size={24} />,
-      title: 'QuickBooks Billing & Checkout',
+      title: "QuickBooks Billing & Checkout",
       body: "Automatically drafts invoices and securely charges client cards through QuickBooks when you approve their treatment plans, recording payment without manual entry.",
-      state: 'waiting',
-      waitingNote: 'Richmond is setting up payment options — nothing for you to do.',
+      state: "waiting",
+      waitingNote:
+        "Richmond is setting up payment options — nothing for you to do.",
     },
   ];
 
   return (
-    <div className="il-onboard__scrim">
-      <div className="il-onboard">
+    <div className="il-onboard__scrim" onMouseDown={onDismiss}>
+      <div className="il-onboard" onMouseDown={(e) => e.stopPropagation()}>
         <div className="il-onboard__hero">
-          <img className="il-onboard__logo" src="/emblem.png" alt="Innerlume" />
-          <h1 className="il-onboard__title">Welcome to your practice dashboard</h1>
+          <button
+            className="il-toggle il-onboard__close"
+            onClick={onDismiss}
+            aria-label="Close"
+          >
+            ✕
+          </button>
+          <img className="il-onboard__logo" src={emblemUrl} alt="Innerlume" />
+          <h1 className="il-onboard__title">
+            Welcome to your practice dashboard
+          </h1>
           <p className="il-onboard__sub">
-            This app quietly handles the paperwork after each session — turning your recorded
-            sessions into draft notes, tracking refills, and keeping your client records up to date.
-            You review and approve; it does the rest.
+            This app quietly handles the paperwork after each session — turning
+            your recorded sessions into draft notes, tracking refills, and
+            keeping your client records up to date. You review and approve; it
+            does the rest.
           </p>
         </div>
 
         <div className="il-onboard__steps">
           <p className="il-onboard__steps-label">Getting started</p>
           {steps.map((s) => (
-            <div key={s.id} className={`il-onboard__step il-onboard__step--${s.state}`}>
-              <div className="il-onboard__step-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {s.state === 'done' ? <IconCheck size={20} /> : s.icon}
+            <div
+              key={s.id}
+              className={`il-onboard__step il-onboard__step--${s.state}`}
+            >
+              <div
+                className="il-onboard__step-icon"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                {s.state === "done" ? <IconCheck size={20} /> : s.icon}
               </div>
               <div className="il-onboard__step-body">
                 <div className="il-onboard__step-head">
                   <span className="il-onboard__step-title">{s.title}</span>
-                  {s.state === 'done' && (
+                  {s.state === "done" && (
                     <span className="il-onboard__step-status">
                       <StatusDot state="connected" /> Connected
                     </span>
                   )}
-                  {s.state === 'waiting' && (
+                  {s.state === "waiting" && (
                     <span className="il-onboard__step-status">
                       <StatusDot state="connecting" /> In progress
                     </span>
@@ -122,7 +162,7 @@ export function Onboarding({ pocket, onDismiss }: Props) {
             You can revisit this guide any time from Settings.
           </p>
           <Button variant="primary" onClick={onDismiss}>
-            Take me to the dashboard
+            Close
           </Button>
         </div>
       </div>

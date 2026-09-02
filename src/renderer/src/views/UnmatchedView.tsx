@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Badge } from '../components/Badge';
 import { fetchUnmatched } from '../lib/api';
 import { formatDate } from '../lib/format';
 import { SkeletonView } from '../components/Skeleton';
@@ -9,18 +8,8 @@ import type { UnmatchedConversation } from '../lib/types';
 import { UnmatchedDetail } from './UnmatchedDetail';
 import { ConnectionError } from '../components/ConnectionError';
 import { allowSampleData } from '../lib/preview';
-
-const SAMPLE: UnmatchedConversation[] = [
-  {
-    id: 's1',
-    source_id: 'rec_unmatched1',
-    source: 'pocket',
-    starts_at: new Date(Date.now() - 3 * 3600e3).toISOString(),
-    ends_at: new Date(Date.now() - 2.5 * 3600e3).toISOString(),
-    correlation_status: 'unmatched',
-    transcript_preview: 'Nicole: quick chat about supplement timing. Client: I take them at night.',
-  },
-];
+import { SampleDataNotice } from '../components/SampleDataNotice';
+import { SAMPLE_UNMATCHED } from '../lib/sampleData';
 
 export function UnmatchedView({ backendUrl, onChanged }: { backendUrl: string; onChanged?: () => void }) {
   const [rows, setRows] = useState<UnmatchedConversation[] | null>(null);
@@ -43,7 +32,7 @@ export function UnmatchedView({ backendUrl, onChanged }: { backendUrl: string; o
         .catch((err: Error) => {
           if (signal?.aborted) return;
           if (allowSampleData(backendUrl)) {
-            setRows(SAMPLE);
+            setRows(SAMPLE_UNMATCHED);
             setOffline(true);
           } else {
             setUnreachable(err.message);
@@ -58,7 +47,7 @@ export function UnmatchedView({ backendUrl, onChanged }: { backendUrl: string; o
     return () => ctrl.abort();
   }, [load]);
 
-  // See Overview: SAMPLE is the offline-preview fallback, never the loading
+  // See Overview: the sample is the offline-preview fallback, never the loading
   // state. `rows` is null only while the first fetch is in flight.
   if (unreachable) return <ConnectionError backendUrl={backendUrl} detail={unreachable} onRetry={() => load()} />;
   if (!rows) return <SkeletonView cards={3} />;
@@ -78,10 +67,12 @@ export function UnmatchedView({ backendUrl, onChanged }: { backendUrl: string; o
           </h1>
           <p className="il-view__sub">
             Recordings we couldn't tie to an appointment — open one to read it in full and tag
-            the client (we never auto-guess){offline && ' · offline preview'}
+            the client (we never auto-guess)
           </p>
         </div>
       </div>
+
+      {offline && <SampleDataNotice />}
 
       {list.length === 0 ? (
         <div className="il-view__empty">
