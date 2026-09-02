@@ -1,6 +1,23 @@
 # Building and installing Innerlume on macOS
 
-Nicole runs a Mac. Three things about that are not obvious.
+## Quick start (from the source zip)
+
+Node 20+ and Xcode Command Line Tools (`xcode-select --install`) are the only
+prerequisites — everything else comes from npm.
+
+```bash
+unzip innerlume-desktop-mac-build.zip -d innerlume
+cd innerlume
+npm install            # devDependencies included; electron-builder needs them
+npm run package        # → release/Innerlume-0.1.0-universal.dmg
+```
+
+The zip carries no `node_modules`, no `out/`, and no `release/` — those are all
+produced by the two commands above. The app icons in `build/` are pre-generated
+and committed, so `npm run icons` is NOT needed (it is the only thing that
+requires `sharp`, so a `sharp` install warning on macOS is harmless).
+
+Read on for the three things about macOS that are not obvious.
 
 ## 1. The DMG can only be built on a Mac
 
