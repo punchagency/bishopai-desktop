@@ -23,11 +23,8 @@ const CREAM = '#f2e4d8';
 
 await mkdir(OUT, { recursive: true });
 
-// Full logo → PNG for the macOS dock + packaging (electron-builder derives the
-// platform icon from this). Source is the clean brand mark pulled from the site
-// favicon (artifact-free, flat terracotta), kept as a lossless PNG in
-// public/logo.png (also used by the splash screen).
-await sharp('public/logo.png').resize(512, 512, { kernel: 'lanczos3' }).png().toFile(`${OUT}/icon.png`);
+// build/icon.png (the macOS .icns + Windows .ico source) is written further
+// down, once emblemTile() exists. public/logo.png stays the splash-screen art.
 
 // Emblem tile — the REAL standalone mortar-&-pestle emblem (the transparent
 // line-art the practice uses on its own, kept in public/emblem-src.png), on a
@@ -84,6 +81,22 @@ async function emblemTile(size) {
   return sharp(tile).composite([{ input: inner, gravity: 'center' }]).png();
 }
 await (await emblemTile(256)).toFile(`${OUT}/emblem.png`); // window/taskbar icon
+
+// macOS .icns + Windows .ico source.
+//
+// This was `sharp('public/logo.png').resize(512, 512)` — the full logo with the
+// wordmark. Two problems, both specific to the dock:
+//
+//   • public/logo.png is 512x512 with NO alpha channel, so the icon was an
+//     opaque square. macOS does not mask app icons the way iOS does, so it drew
+//     hard-edged in a dock where every neighbour is a rounded squircle.
+//   • 512 is electron-builder's bare minimum for icns; the 1024 Retina slot was
+//     upscaled from it, and there is no larger source in the repo to recover.
+//
+// The emblem tile fixes both — it is composed, so it renders natively at 1024,
+// and its rounded corners carry real transparency. The cost is the wordmark,
+// which was never legible at dock size anyway.
+await (await emblemTile(1024)).toFile(`${OUT}/icon.png`);
 
 // Linux desktop-entry icon set.
 //

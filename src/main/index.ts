@@ -41,11 +41,11 @@ function loadConfig(): void {
 const assets = existsSync(join(__dirname, '../../build', 'icon.png'))
   ? join(__dirname, '../../build')
   : join(app.getAppPath(), 'build');
-// The full logo (with wordmark) is only legible large — perfect for the macOS
-// dock. The window/taskbar icon on Linux/Windows renders small (~24–48px), where
-// the wordmark blurs, so use the REAL mortar-&-pestle emblem tile (cropped from
-// the logo, not a redrawn vector). See make-icons.mjs.
-const logoPath = join(assets, 'icon.png'); // full logo (dock)
+// Both are emblem tiles now: build/icon.png is the 1024 tile (macOS dock, where
+// the wordmark logo it replaced was an opaque 512 square that drew hard-edged
+// against every rounded neighbour), and build/emblem.png the 256 one used for
+// the small Linux/Windows window and taskbar icons. See make-icons.mjs.
+const logoPath = join(assets, 'icon.png'); // 1024 emblem tile — see make-icons.mjs
 const windowIconPath = process.platform === 'darwin' ? logoPath : join(assets, 'emblem.png');
 
 let mainWindow: BrowserWindow | null = null;
