@@ -2855,6 +2855,113 @@
   overflow-y: auto;
 }
 
+/* An HTML cadence email, drawn in a sandboxed frame (components/EmailPreview.tsx).
+   It paints its own white ground because that is what the recipient's mail client
+   will do, so the border is what ties it back into the card. */
+.il-email-frame {
+  display: block;
+  width: 100%;
+  height: 260px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin: 0.5rem 0 0;
+  background: #ffffff;
+  color-scheme: light;
+}
+
+/* Choosing which times a cadence email offers (components/SlotBlockEditor.tsx).
+   Quiet by default — it sits under the body field and should not compete with
+   it — but every row is a control, so nothing here is muted into illegibility. */
+.il-slotedit {
+  margin-top: 0.6rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+.il-slotedit__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.il-slotedit__title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.il-slotedit__list {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.il-slotedit__row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.3rem 0.25rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+}
+.il-slotedit__label {
+  font-size: 0.8rem;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.il-slotedit__x {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0 0.25rem;
+  border-radius: 999px;
+}
+.il-slotedit__x:hover:not(:disabled) { color: var(--danger); }
+.il-slotedit__x:disabled { opacity: 0.4; cursor: default; }
+.il-slotedit__actions {
+  display: flex;
+  gap: 0.8rem;
+  margin-top: 0.55rem;
+}
+.il-link--quiet { color: var(--text-muted); }
+.il-link--quiet:hover { color: var(--danger); }
+.il-slotedit__menu {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.55rem;
+  padding-top: 0.55rem;
+  border-top: 1px dashed var(--border);
+}
+.il-slotedit__add {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  padding: 0.28rem 0.6rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.il-slotedit__add:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent-active);
+}
+.il-slotedit__add:disabled { opacity: 0.5; cursor: default; }
+.il-slotedit__meta {
+  margin: 0.5rem 0 0;
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+.il-slotedit__meta--warn { color: var(--warning); }
+
 /* Queue tab */
 .il-queue {
   display: flex;
@@ -3506,8 +3613,14 @@
 .il-approval__body {
   margin: 0 0 0.6rem;
   white-space: pre-wrap;
-  color: var(--text-muted);
-  font-size: 0.9rem;
+  /* Full-strength text, not --text-muted: this is copy Nicole has to actually
+     read before approving it, not a caption on something else. */
+  color: var(--text);
+  font-size: 0.92rem;
+  line-height: 1.55;
+  /* This is a <pre> now (components/EmailPreview.tsx renders plain-text bodies
+     as one) — without this it takes the UA's monospace default. */
+  font-family: inherit;
 }
 .il-approval__actions {
   display: flex;

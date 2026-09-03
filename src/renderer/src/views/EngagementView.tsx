@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Card } from '../components/Card';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
@@ -28,6 +28,9 @@ import { ApprovalsPanel } from './ApprovalsPanel';
 import { ConnectionError } from '../components/ConnectionError';
 import { allowSampleData } from '../lib/preview';
 import { SampleDataNotice } from '../components/SampleDataNotice';
+import { EmailPreview } from '../components/EmailPreview';
+import { SlotBlockEditor } from '../components/SlotBlockEditor';
+import { splitEmailBody, joinEmailBody } from '../lib/emailBody';
 
 // WF3: lead re-engagement + site activity. Four tabs:
 //   Leads     — status + inline pending subject; customize upcoming email or view history
@@ -122,7 +125,15 @@ function InlineEmailEditor({
   onClose,
 }: EmailEditorProps) {
   const [subject, setSubject] = useState(initialSubject);
-  const [body, setBody] = useState(initialBody);
+  // Nicole edits her message; the server-appended booking block rides along
+  // untouched. Editing it by hand meant editing markup, and its buttons carry
+  // signed single-use tokens that must survive the round trip verbatim.
+  const initial = useMemo(() => splitEmailBody(initialBody), [initialBody]);
+  const [message, setMessage] = useState(initial.message);
+  // The block is editable now (add/remove times), so it is state rather than a
+  // constant read off the incoming body.
+  const [slots, setSlots] = useState(initial.slots);
+  const body = useMemo(() => joinEmailBody(message.trim(), slots), [message, slots]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -133,22 +144,22 @@ function InlineEmailEditor({
     if (!el) return;
     el.style.height = 'auto';
     el.style.height = `${Math.max(120, el.scrollHeight)}px`;
-  }, [body]);
+  }, [message]);
 
   const handleSaveDraft = async () => {
-    if (!subject.trim() || !body.trim()) return;
+    if (!subject.trim() || !message.trim()) return;
     setBusy(true);
     setError(null);
     try {
       if (offline) {
         setSuccess('Draft saved for scheduled send (offline)');
         setTimeout(() => {
-          onSaved({ subject: subject.trim(), body: body.trim(), is_custom: true });
+          onSaved({ subject: subject.trim(), body, is_custom: true });
           onClose();
         }, 500);
         return;
       }
-      await saveLeadDraft(backendUrl, leadId, step, subject.trim(), body.trim());
+      await saveLeadDraft(backendUrl, leadId, step, subject.trim(), body);
       setSuccess('Draft saved for scheduled send');
       setTimeout(() => {
         onSaved();
@@ -161,7 +172,7 @@ function InlineEmailEditor({
   };
 
   const handleSendNow = async () => {
-    if (!subject.trim() || !body.trim()) return;
+    if (!subject.trim() || !message.trim()) return;
     if (!window.confirm(`Send this email to ${recipientEmail ?? 'lead'} right now?`)) return;
     setBusy(true);
     setError(null);
@@ -174,7 +185,7 @@ function InlineEmailEditor({
         }, 500);
         return;
       }
-      await sendLeadEmail(backendUrl, leadId, { step, subject: subject.trim(), body: body.trim() });
+      await sendLeadEmail(backendUrl, leadId, { step, subject: subject.trim(), body });
       setSuccess('Email sent!');
       setTimeout(() => {
         onSent();
@@ -237,18 +248,27 @@ function InlineEmailEditor({
       <div className="il-field">
         <label className="il-field__label" htmlFor={`body-${leadId}`}>
           Body
-          <span className="il-tpl-row__charcount"> · {body.length} chars</span>
+          <span className="il-tpl-row__charcount"> · {message.length} chars</span>
         </label>
         <textarea
           id={`body-${leadId}`}
           ref={bodyRef}
           className="il-input il-inline-editor__textarea"
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
           disabled={busy}
           rows={5}
           placeholder="Email message..."
         />
+        {slots !== null && (
+          <SlotBlockEditor
+            backendUrl={backendUrl}
+            leadId={leadId}
+            block={slots}
+            onChange={(next) => setSlots(next === '' ? '' : next)}
+            disabled={busy}
+          />
+        )}
       </div>
 
       {error && <p className="il-error">{error}</p>}
@@ -457,7 +477,7 @@ function HistoryRow({ item }: { item: SentEmail }) {
             {showBody ? 'Hide' : 'Show email'}
           </button>
         </div>
-        {showBody && <pre className="il-email-body">{item.body}</pre>}
+        {showBody && <EmailPreview body={item.body} />}
       </div>
     </li>
   );
@@ -531,7 +551,9 @@ function QueueRow({
             Cancel
           </Button>
         </div>
-        {showBody && !editing && <pre className="il-email-body il-queue-row__body">{item.body}</pre>}
+        {showBody && !editing && (
+          <EmailPreview body={item.body} className="il-email-body il-queue-row__body" />
+        )}
       </div>
 
       {editing && (
@@ -584,7 +606,7 @@ function SentRow({ item }: { item: SentEmail }) {
           </button>
         </div>
       </div>
-      {showBody && <pre className="il-email-body">{item.body}</pre>}
+      {showBody && <EmailPreview body={item.body} />}
     </div>
   );
 }

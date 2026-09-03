@@ -2,6 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { approveEmails, dispatchApproved, fetchApprovals, rejectEmails, updateApproval } from '../lib/api';
 import type { ApprovalItem, ApprovalList } from '../lib/types';
 import { EmptyState } from '../components/EmptyState';
+import { EmailPreview } from '../components/EmailPreview';
+import { SlotBlockEditor } from '../components/SlotBlockEditor';
+import { splitEmailBody, joinEmailBody } from '../lib/emailBody';
 
 // The gate itself.
 //
@@ -196,6 +199,7 @@ export function ApprovalsPanel({
               </p>
               {urgent.map((item) => (
                 <ApprovalRow
+                  backendUrl={backendUrl}
                   key={item.id}
                   item={item}
                   checked={selected.has(item.id)}
@@ -226,6 +230,7 @@ export function ApprovalsPanel({
 
               {rows.map((item) => (
                 <ApprovalRow
+                  backendUrl={backendUrl}
                   key={item.id}
                   item={item}
                   checked={selected.has(item.id)}
@@ -261,7 +266,9 @@ function ApprovalRow({
   onSave,
   onApprove,
   onReject,
+  backendUrl,
 }: {
+  backendUrl: string;
   item: ApprovalItem;
   checked: boolean;
   busy: boolean;
@@ -273,7 +280,11 @@ function ApprovalRow({
   onReject: () => void;
 }) {
   const [subject, setSubject] = useState(item.subject);
-  const [body, setBody] = useState(item.body);
+  // Edit the message; carry the server-appended booking block through verbatim.
+  // See lib/emailBody.ts — its buttons hold signed single-use tokens.
+  const initial = useMemo(() => splitEmailBody(item.body), [item.body]);
+  const [message, setMessage] = useState(initial.message);
+  const [slots, setSlots] = useState(initial.slots);
 
   return (
     <div className="il-approval">
@@ -298,12 +309,25 @@ function ApprovalRow({
             <textarea
               className="il-textarea"
               rows={8}
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
               aria-label="Body"
             />
+            {slots !== null && item.lead_id && (
+              <SlotBlockEditor
+                backendUrl={backendUrl}
+                leadId={item.lead_id}
+                block={slots}
+                onChange={setSlots}
+                disabled={busy}
+              />
+            )}
             <div className="il-approval__actions">
-              <button className="il-btn" onClick={() => onSave(subject, body)} disabled={busy}>
+              <button
+                className="il-btn"
+                onClick={() => onSave(subject, joinEmailBody(message.trim(), slots))}
+                disabled={busy || !message.trim()}
+              >
                 Save changes
               </button>
               <button className="il-btn" onClick={onEdit} disabled={busy}>
@@ -315,7 +339,7 @@ function ApprovalRow({
         ) : (
           <>
             <p className="il-approval__subject">{item.subject}</p>
-            <p className="il-approval__body">{item.body}</p>
+            <EmailPreview body={item.body} className="il-approval__body" />
             <div className="il-approval__actions">
               <button className="il-btn il-btn--primary" onClick={onApprove} disabled={busy}>
                 Approve

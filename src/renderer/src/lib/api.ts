@@ -687,6 +687,32 @@ export function saveLeadDraft(
   });
 }
 
+/** Times currently offerable to this lead, for the booking-block editor. */
+export function fetchLeadSlots(
+  backendUrl: string,
+  leadId: string,
+  signal?: AbortSignal,
+): Promise<{ slots: { starts_at: string; label: string }[]; timezone: string }> {
+  return json(`${backendUrl}/engagement/leads/${leadId}/slots`, { signal });
+}
+
+/**
+ * Render a booking block for the chosen times. An empty list returns empty html,
+ * which is how the editor removes the block. `dropped` counts times that were
+ * taken between loading the editor and saving.
+ */
+export function renderLeadSlotBlock(
+  backendUrl: string,
+  leadId: string,
+  slots: string[],
+): Promise<{ html: string; dropped?: number }> {
+  return json(`${backendUrl}/engagement/leads/${leadId}/slot-block`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ slots }),
+  });
+}
+
 /** Reset a lead's customized draft back to the track template. */
 export function resetLeadDraft(
   backendUrl: string,
