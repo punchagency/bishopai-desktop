@@ -801,7 +801,9 @@ export interface InnerlumeBridge {
 
 declare global {
   interface Window {
-    innerlume: InnerlumeBridge;
+    // Only present in the Electron desktop build (see preload/index.ts) —
+    // undefined when this renderer runs as a plain website. See lib/platform.ts.
+    innerlume?: InnerlumeBridge;
   }
 }
 

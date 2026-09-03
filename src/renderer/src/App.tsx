@@ -12,6 +12,7 @@ import { ActivityView } from './views/ActivityView';
 import { SettingsView } from './views/SettingsView';
 import { Login } from './views/Login';
 import { fetchAuthStatus, fetchOverview, fetchPocketStatus, setAuthToken, setUnauthorizedHandler } from './lib/api';
+import { getBackendUrl } from './lib/platform';
 import type { AuthStatus, PocketStatus, ViewKey } from './lib/types';
 import { Onboarding } from './views/Onboarding';
 import { ImportView } from './views/ImportView';
@@ -21,7 +22,6 @@ import { IconDownload } from './components/Icons';
 // plain text). Anything else dropped is ignored rather than read as noise.
 const TRANSCRIPT_EXT = /\.(txt|md|vtt|srt|docx)$/i;
 
-const DEFAULT_BACKEND = 'http://localhost:3000';
 const TOKEN_KEY = 'innerlume.token';
 
 export function App() {
@@ -72,15 +72,12 @@ export function App() {
     else localStorage.removeItem(TOKEN_KEY);
   }, []);
 
-  // Pull app info (which backend to talk to). Outside Electron (or if the IPC
-  // fails) there is no config to read, so fall back to the localhost default —
-  // but only here, once, rather than as the initial state everything renders on.
+  // Pull app info (which backend to talk to) — desktop via Electron IPC, or
+  // (outside Electron, i.e. running as a website) the build-time default. See
+  // lib/platform.ts. Only here, once, rather than as the initial state
+  // everything renders on.
   useEffect(() => {
-    window.innerlume
-      ?.getAppInfo()
-      .then((i) => setBackendUrl(i.backendUrl || DEFAULT_BACKEND))
-      .catch(() => setBackendUrl(DEFAULT_BACKEND));
-    if (!window.innerlume) setBackendUrl(DEFAULT_BACKEND);
+    void getBackendUrl().then(setBackendUrl);
   }, []);
 
   // Seed the api token from storage, and when any guarded call 401s (login was

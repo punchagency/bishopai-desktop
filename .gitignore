@@ -1,5 +1,8 @@
 node_modules/
 out/
 dist/
+dist-web/
 release/
 *.log
+.env
+.env.web

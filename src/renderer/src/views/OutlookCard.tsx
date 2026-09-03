@@ -3,6 +3,7 @@ import { Card } from '../components/Card';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { disconnectOutlook, fetchOutlookStatus, setPrimaryOutlook, startOutlookConnect } from '../lib/api';
+import { openExternal } from '../lib/platform';
 import type { OutlookStatus } from '../lib/types';
 
 // Settings panel: connect Innerlume's Outlook mailboxes so WF3 re-engagement
@@ -60,7 +61,7 @@ export function OutlookCard({ backendUrl }: { backendUrl: string }) {
       setError('Couldn’t start the connection. Outlook may not be set up on the server yet.');
       return;
     }
-    window.innerlume?.openExternal(url); // Microsoft's consent screen
+    openExternal(url); // Microsoft's consent screen
     setConnecting(true);
     const startedAt = Date.now();
     pollRef.current = setInterval(async () => {
