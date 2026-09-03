@@ -1,4 +1,5 @@
 import type {
+  IntegrationStatus,
   ClientSummary,
   PriorNote,
   AuthStatus,
@@ -685,6 +686,14 @@ export function saveLeadDraft(
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ step, subject, body }),
   });
+}
+
+/** Which integrations are actually connected — drives the welcome guide. */
+export function fetchIntegrationStatus(
+  backendUrl: string,
+  signal?: AbortSignal,
+): Promise<IntegrationStatus> {
+  return json(`${backendUrl}/integrations/status`, { signal });
 }
 
 /** Times currently offerable to this lead, for the booking-block editor. */

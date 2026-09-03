@@ -1,7 +1,8 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "../components/Button";
 import { StatusDot } from "../components/StatusDot";
-import type { PocketStatus } from "../lib/types";
+import type { IntegrationStatus, PocketStatus } from "../lib/types";
+import { fetchIntegrationStatus } from "../lib/api";
 import {
   IconMic,
   IconCalendar,
@@ -23,11 +24,12 @@ interface Step {
 }
 
 interface Props {
+  backendUrl: string;
   pocket: PocketStatus | null;
   onDismiss: () => void;
 }
 
-export function Onboarding({ pocket, onDismiss }: Props) {
+export function Onboarding({ backendUrl, pocket, onDismiss }: Props) {
   // Escape, a click on the scrim and the ✕ all dismiss. This panel predates
   // components/Modal.tsx and had none of the three: the only way out was the
   // footer button, which scrolled off the bottom on a short window.
@@ -40,6 +42,27 @@ export function Onboarding({ pocket, onDismiss }: Props) {
   // Nothing for Nicole to click: Pocket sends recordings to the server, so this
   // step is a report on setup done elsewhere, not an action she takes here.
   const pocketReady = !!pocket?.healthy;
+
+  // The other four used to be hardcoded "in progress — Richmond is setting this
+  // up". They finished, and the guide went on saying otherwise, so the first
+  // thing a new user read was already stale. Now it reports what is actually
+  // connected, and each step flips on its own when the backend says so.
+  const [live, setLive] = useState<IntegrationStatus | null>(null);
+  useEffect(() => {
+    const ctrl = new AbortController();
+    fetchIntegrationStatus(backendUrl, ctrl.signal)
+      .then(setLive)
+      .catch(() => {
+        // null keeps every step in its "checking" state rather than inventing a
+        // problem out of a failed request.
+        if (!ctrl.signal.aborted) setLive(null);
+      });
+    return () => ctrl.abort();
+  }, [backendUrl]);
+
+  // Until the status lands, a step is "checking" — neither connected nor a fault.
+  const stateOf = (ready: boolean | undefined): Step["state"] =>
+    ready === undefined ? "waiting" : ready ? "done" : "waiting";
 
   const steps: Step[] = [
     {
@@ -57,35 +80,48 @@ export function Onboarding({ pocket, onDismiss }: Props) {
       icon: <IconCalendar size={24} />,
       title: "Practice Better Calendar & Records",
       body: "Connects with your Practice Better account to sync your schedule, auto-update patient records, and check for open availability times when clients need to book their next appointment.",
-      state: "waiting",
-      waitingNote:
-        "Richmond is finalizing this connection — nothing for you to do.",
+      state: stateOf(live?.practice_better),
+      waitingNote: live?.practice_better
+        ? undefined
+        : live === null
+          ? "Checking…"
+          : "Richmond is finishing this connection — nothing for you to do.",
     },
     {
       id: "drive",
       icon: <IconFolder size={24} />,
       title: "Secure Google Drive Folder",
       body: "Draft notes and treatment protocols are automatically saved to your shared Google Drive folder as soon as you approve them, keeping everything tidy and organized.",
-      state: "waiting",
-      waitingNote: "Richmond is setting this up — nothing for you to do.",
+      state: stateOf(live?.google_drive),
+      waitingNote: live?.google_drive
+        ? undefined
+        : live === null
+          ? "Checking…"
+          : "Richmond is finishing this connection — nothing for you to do.",
     },
     {
       id: "outlook",
       icon: <IconMail size={24} />,
       title: "Automated Client Re-engagement",
       body: "Connects with your Outlook to automatically email patients who are due for a check-in. It suggests open slots from your schedule as simple, one-click booking links.",
-      state: "waiting",
-      waitingNote:
-        "Richmond is configuring the email setup — nothing for you to do.",
+      state: stateOf(live?.outlook),
+      waitingNote: live?.outlook
+        ? undefined
+        : live === null
+          ? "Checking…"
+          : "Richmond is finishing this connection — nothing for you to do.",
     },
     {
       id: "qb",
       icon: <IconCreditCard size={24} />,
       title: "QuickBooks Billing & Checkout",
       body: "Automatically drafts invoices and securely charges client cards through QuickBooks when you approve their treatment plans, recording payment without manual entry.",
-      state: "waiting",
-      waitingNote:
-        "Richmond is setting up payment options — nothing for you to do.",
+      state: stateOf(live?.quickbooks),
+      waitingNote: live?.quickbooks
+        ? undefined
+        : live === null
+          ? "Checking…"
+          : "Richmond is finishing this connection — nothing for you to do.",
     },
   ];
 
@@ -139,7 +175,8 @@ export function Onboarding({ pocket, onDismiss }: Props) {
                   )}
                   {s.state === "waiting" && (
                     <span className="il-onboard__step-status">
-                      <StatusDot state="connecting" /> In progress
+                      <StatusDot state="connecting" />{" "}
+                      {s.waitingNote === "Checking…" ? "Checking" : "In progress"}
                     </span>
                   )}
                 </div>

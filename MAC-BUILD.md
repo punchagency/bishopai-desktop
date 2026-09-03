@@ -61,6 +61,66 @@ crashes at launch under the hardened runtime without the JIT entitlements.
 copied from removable media are not quarantined, so an unsigned build opens
 normally. Downloading or AirDropping the same file will not work.
 
+### "Innerlume contains malware and was moved to the Trash"
+
+This is the same problem wearing a much more alarming hat, and it is what macOS
+14+ says instead of the older "unidentified developer" wording. Nothing was
+found in the app. The build is ad-hoc signed (`hardenedRuntime` is on but
+`notarize` is off and there is no Developer ID), so there is no signature for
+Apple to check — and an unverifiable app that also carries the quarantine flag
+is treated as hostile rather than merely unknown.
+
+It happens even on the Mac that built the app, because the quarantine flag rides
+along with whatever the source arrived in.
+
+Recover it:
+
+```bash
+# 1. Put it back — macOS moved it, it did not delete it
+open ~/.Trash                 # drag Innerlume.app to /Applications
+
+# 2. Clear the flag and re-sign
+bash scripts/mac-fix-quarantine.sh
+
+# 3. Open it
+open /Applications/Innerlume.app
+```
+
+Or by hand, if the script is not to hand:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/Innerlume.app
+codesign --force --sign - /Applications/Innerlume.app
+```
+
+Every rebuild needs this again until the app is notarized — clearing quarantine
+treats the symptom, and only a Developer ID signature removes the cause.
+
+### Signing with an existing Developer ID
+
+If you already hold a Developer ID certificate from another project, Innerlume
+can use it without editing `package.json`. electron-builder reads `CSC_NAME`:
+
+```bash
+security find-identity -v -p codesigning     # confirm the cert is in the keychain
+export CSC_NAME="Developer ID Application: Your Org (TEAMID)"
+npm run package
+```
+
+That is the difference between a build macOS calls malware and one it merely
+warns about: a signed app fails to a "cannot check it for malicious software"
+dialog where **Open Anyway** works, instead of being moved to the Trash.
+
+The identity is deliberately NOT committed here. Pinning one in `package.json`
+breaks the build on any machine that lacks that certificate — electron-builder
+aborts rather than falling back — and `CSC_NAME` keeps the unsigned path working
+for anyone who just wants to run it locally.
+
+Signing still is not notarization. macOS 10.15+ wants both for downloaded apps,
+so a signed-but-unnotarized build is a better failure, not a clean one. To
+finish the job, set the three `APPLE_*` variables above and flip
+`build.mac.notarize` to `true`.
+
 ## 3. Traffic lights overlap the content
 
 The window uses `titleBarStyle: 'hiddenInset'`, which removes the title bar but

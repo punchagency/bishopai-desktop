@@ -42,6 +42,8 @@
       ],
       "category": "public.app-category.medical",
       "icon": "build/icon.png",
+      "identity": "Ergun Development LLC (ZCSJD7EGFN)",
+      "type": "distribution",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",

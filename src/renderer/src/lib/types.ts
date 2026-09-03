@@ -900,3 +900,11 @@ export interface ApprovalSummary {
   /** When the soonest pending item stops being sendable. */
   nextExpiresAt: string | null;
 }
+
+/** Live connection state for the integrations the welcome guide lists. */
+export interface IntegrationStatus {
+  practice_better: boolean;
+  google_drive: boolean;
+  outlook: boolean;
+  quickbooks: boolean;
+}

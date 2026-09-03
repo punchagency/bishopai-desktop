@@ -220,7 +220,9 @@ export function App() {
 
   return (
     <div className="il-app">
-      {showOnboarding && <Onboarding pocket={pocket} onDismiss={dismissOnboarding} />}
+      {showOnboarding && (
+        <Onboarding backendUrl={backendUrl} pocket={pocket} onDismiss={dismissOnboarding} />
+      )}
       {importOpen && (
         <ImportView
           backendUrl={backendUrl}
