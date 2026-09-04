@@ -1,0 +1,16 @@
+# This deploy is the standalone web build of the renderer (npm run build:web).
+# Everything Electron-related is dead weight on a static host — `release/`
+# alone is ~588MB of packaged installers and will hang the upload.
+release/
+out/
+dist-web/
+node_modules/
+build/
+scripts/
+*.zip
+*.dmg
+*.AppImage
+*.deb
+*.exe
+.git/
+.vercel/
