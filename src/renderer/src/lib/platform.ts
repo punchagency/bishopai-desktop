@@ -10,7 +10,7 @@
 // unconfigured build still points somewhere real instead of localhost.
 const WEB_DEFAULT_BACKEND =
   (import.meta.env.VITE_BACKEND_URL as string | undefined) ||
-  'https://innerlume-api.onrender.com';
+  'https://bishopai-server.onrender.com';
 
 /**
  * Which backend this dashboard talks to.

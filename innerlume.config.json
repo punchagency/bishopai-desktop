@@ -1,5 +1,5 @@
 {
-  "backendUrl": "https://innerlume-api.onrender.com",
+  "backendUrl": "https://bishopai-server.onrender.com",
   "_localBackendUrl": "http://localhost:3000",
   "_note": "Pointed at the hosted Render backend (Railway died 2026-09-04). Swap backendUrl with _localBackendUrl to go back to a local server; INNERLUME_BACKEND_URL overrides both at runtime."
 }
