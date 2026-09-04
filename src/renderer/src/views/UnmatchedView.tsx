@@ -136,17 +136,31 @@ function UnmatchedRow({
     hour: '2-digit',
     minute: '2-digit',
   });
+  const held = conversation.correlation_status === 'needs_review';
+  const splitNote = held ? splitStatusLabel(conversation) : null;
   return (
     <div className={`il-qrow ${active ? 'il-qrow--on' : ''}`}>
       <button className="il-qrow__main" onClick={onOpen} aria-current={active}>
-        <span className="il-qrow__status il-qrow__status--in_review" title="Unmatched" />
+        <span className="il-qrow__status il-qrow__status--in_review" title={held ? 'Needs a split' : 'Unmatched'} />
         <span className="il-qrow__text">
           <span className="il-qrow__name" title={formatDate(conversation.starts_at)}>{time}</span>
           <span className="il-qrow__meta" title={conversation.transcript_preview}>
             {conversation.transcript_preview || '(no transcript)'}
           </span>
+          {splitNote && <span className="il-qrow__meta il-qrow__meta--flag">{splitNote}</span>}
         </span>
       </button>
     </div>
   );
+}
+
+/** One line for a held recording: where its split proposal stands. */
+function splitStatusLabel(c: UnmatchedConversation): string {
+  if (c.segmentation_status === 'done' && (c.segment_count ?? 0) >= 2) {
+    return `${c.segment_count} sessions detected — review the split`;
+  }
+  if (c.segmentation_status === 'pending' || c.segmentation_status === 'processing') {
+    return 'Working out the split…';
+  }
+  return 'May contain more than one client — needs a split';
 }

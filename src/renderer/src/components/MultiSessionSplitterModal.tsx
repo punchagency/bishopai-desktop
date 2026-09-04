@@ -59,16 +59,23 @@ export function MultiSessionSplitterModal({
   onTreatAsSingleSession,
 }: Props) {
   const [loading, setLoading] = useState(true);
+  const [redetecting, setRedetecting] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<CandidateAppointment[]>([]);
   const [segments, setSegments] = useState<EditableSegment[]>([]);
+  const [reloadKey, setReloadKey] = useState(0);
+  // The proposal is served from cache on the first open (instant). "Re-detect"
+  // forces a fresh model pass for a recording whose transcript or calendar has
+  // changed since.
+  const refresh = reloadKey > 0;
 
   useEffect(() => {
     let active = true;
+    if (refresh) setRedetecting(true);
     Promise.all([
       fetchCandidates(backendUrl, conversation.id).catch(() => ({ appointments: [] })),
-      fetchSegments(backendUrl, conversation.id).catch(() => ({ segments: [], candidates: [] })),
+      fetchSegments(backendUrl, conversation.id, undefined, { refresh }).catch(() => ({ segments: [], candidates: [] })),
     ])
       .then(([candRes, segRes]) => {
         if (!active) return;
@@ -117,17 +124,19 @@ export function MultiSessionSplitterModal({
 
         setSegments(loadedSegs);
         setLoading(false);
+        setRedetecting(false);
       })
       .catch((e) => {
         if (!active) return;
         setError(String(e));
         setLoading(false);
+        setRedetecting(false);
       });
 
     return () => {
       active = false;
     };
-  }, [backendUrl, conversation.id]);
+  }, [backendUrl, conversation.id, reloadKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const updateSegmentAppointment = (segId: number, apptId: string) => {
     setSegments((prev) =>
@@ -162,11 +171,19 @@ export function MultiSessionSplitterModal({
 
   return (
     <Modal
-      title="Multi-Session Splitter"
+      title="Review the split"
       onClose={onClose}
       footer={
         <div className="il-modal__actions" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
           {error && <span className="il-error">{error}</span>}
+          <Button
+            variant="ghost"
+            onClick={() => setReloadKey((k) => k + 1)}
+            disabled={busy || redetecting}
+            title="Run the boundary detection again from scratch"
+          >
+            {redetecting ? 'Re-detecting…' : 'Re-detect'}
+          </Button>
           {onTreatAsSingleSession && (
             <Button
               variant="secondary"
@@ -175,28 +192,30 @@ export function MultiSessionSplitterModal({
                 onTreatAsSingleSession();
               }}
               disabled={busy}
-              title="Treat this recording as a single continuous session"
+              title="Treat this recording as one client's continuous session"
             >
-              Treat as Single Session
+              Assign as one session
             </Button>
           )}
           <Button variant="ghost" onClick={onClose} disabled={busy}>
             Cancel
           </Button>
           <Button variant="primary" onClick={confirmSplit} disabled={busy || loading || segments.length === 0}>
-            {busy ? 'Splitting & Extracting…' : 'Split & Extract Sessions'}
+            {busy ? 'Filing sessions…' : `File ${segments.length} session${segments.length === 1 ? '' : 's'}`}
           </Button>
         </div>
       }
     >
       <div style={{ padding: '0.5rem 0' }}>
-        <p className="il-meta" style={{ marginBottom: '1rem', fontSize: '0.875rem' }}>
-          This recording spans multiple appointments. We auto-detected session transition boundaries below.
-          Assign each segment to its appointment or adjust the turn ranges as needed.
+        <p className="il-meta" style={{ marginBottom: '1rem', fontSize: 'var(--text-sm)' }}>
+          This recording looks like it holds more than one client's session. The proposed
+          boundaries and client for each part are below — adjust the turn ranges or the
+          assignment if anything is off, then file them. Each part is extracted into its
+          own note.
         </p>
 
         {loading ? (
-          <p className="il-empty">Analyzing session boundaries…</p>
+          <p className="il-empty">{redetecting ? 'Re-reading the transcript…' : 'Loading the proposed split…'}</p>
         ) : segments.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '1rem' }}>
             <p className="il-empty" style={{ marginBottom: '1rem' }}>
@@ -223,11 +242,11 @@ export function MultiSessionSplitterModal({
                   padding: '0.85rem',
                   borderRadius: '8px',
                   border: '1px solid var(--border)',
-                  background: 'var(--il-color-surface-raised, rgba(0,0,0,0.02))',
+                  background: 'var(--surface-2)',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                  <strong style={{ fontSize: '0.875rem', color: '#c87850' }}>
+                  <strong style={{ fontSize: '0.875rem', color: 'var(--text)', fontWeight: 700 }}>
                     Session #{idx + 1}
                   </strong>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem' }}>
@@ -251,7 +270,7 @@ export function MultiSessionSplitterModal({
                 </div>
 
                 <div style={{ marginBottom: '0.6rem' }}>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--il-color-text-subtle)', marginBottom: '0.25rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
                     Assign to Appointment:
                   </label>
                   <select
@@ -269,7 +288,7 @@ export function MultiSessionSplitterModal({
                   </select>
                 </div>
 
-                <div style={{ fontSize: '0.78rem', color: 'var(--il-color-text-subtle)', background: 'rgba(0,0,0,0.03)', padding: '0.4rem 0.6rem', borderRadius: '4px', fontStyle: 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', background: 'var(--surface-2)', padding: '0.4rem 0.6rem', borderRadius: 'var(--radius-sm)', fontStyle: 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   "{seg.snippet}"
                 </div>
               </div>

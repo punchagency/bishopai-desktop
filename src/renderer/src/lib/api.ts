@@ -220,18 +220,28 @@ export interface SessionTurn {
   text: string;
 }
 
-/** Detect multi-session boundaries for a recording. */
+/**
+ * The proposed split for a recording. Served instantly from the pre-computed
+ * proposal when one exists; pass `refresh` to force a fresh pass (the "Re-detect"
+ * control in the splitter).
+ */
 export function fetchSegments(
   backendUrl: string,
   id: string,
   signal?: AbortSignal,
+  opts?: { refresh?: boolean },
 ): Promise<{
   conversation_id: string;
   segments: SessionSegment[];
   candidates: CandidateAppointment[];
   turns: SessionTurn[];
+  /** ISO — when the proposal was computed. */
+  computed_at?: string;
+  /** 'cached' | 'live' | 'refreshed' — how this response was produced. */
+  source?: string;
 }> {
-  return json(`${backendUrl}/review/unmatched/${id}/segments`, { signal });
+  const q = opts?.refresh ? '?refresh=1' : '';
+  return json(`${backendUrl}/review/unmatched/${id}/segments${q}`, { signal });
 }
 
 /** Split a multi-session recording into separate child session conversations. */

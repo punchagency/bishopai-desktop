@@ -55,6 +55,29 @@ h3 {
   font-weight: 700;
 }
 
+/* Serif is one moment — the wordmark and page-level hero titles (>= ~1.25rem).
+   Everything below that set in Libre Baskerville was flavour, and at UI sizes a
+   400/700 text serif is simply less legible than the sans it sits next to. This
+   loads after components.css, so it wins on source order at equal specificity. */
+.il-card__title,
+.il-modal__title,
+.il-fs__coverage strong,
+.il-fs__sectionTitle,
+.il-suppgrid__section h4,
+.il-emptystate__title,
+.il-qrow__name,
+.il-cgroup__name,
+.il-detail__title h2,
+.il-detail__section,
+.il-dropzone__title,
+.il-importv__title,
+.il-importv__done-title,
+.il-approvals__group-count,
+.il-infopop__title,
+.il-provpop__head {
+  font-family: var(--font-body);
+}
+
 .il-app {
   display: flex;
   flex-direction: column;
@@ -127,8 +150,9 @@ h3 {
   color: var(--text);
 }
 .il-nav--on {
-  background: var(--accent-soft);
-  color: var(--accent-active);
+  background: var(--surface-2);
+  color: var(--text);
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 .il-nav__icon {
   width: 18px;
@@ -139,18 +163,16 @@ h3 {
   flex: 1;
 }
 .il-nav__count {
-  background: var(--accent);
-  color: var(--on-accent);
-  font-size: 0.77rem;
+  background: var(--action);
+  color: var(--on-action);
+  font-size: var(--text-xs);
   min-width: 18px;
   text-align: center;
   padding: 0.05rem 0.35rem;
   border-radius: 999px;
 }
 .il-pill {
-  font-size: 0.67rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-size: var(--text-2xs);
   padding: 0.1rem 0.4rem;
   border-radius: 999px;
   font-weight: 700;
@@ -200,12 +222,13 @@ h3 {
   border-color: var(--accent);
 }
 .il-stat--interactive {
-  transition: all 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 .il-stat--interactive:hover {
   border-color: var(--accent);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
 }
 .il-stat--active {
   border-color: var(--accent) !important;
@@ -499,17 +522,17 @@ h3 {
   transform: translateY(1px);
 }
 
-/* Primary — terracotta accent */
+/* Primary — solid ink, so it never out-shouts a clinical-state cue nearby */
 .il-button--primary {
-  background: var(--accent);
-  color: var(--on-accent);
+  background: var(--action);
+  color: var(--on-action);
 }
 .il-button--primary:hover {
-  background: var(--accent-hover);
+  background: var(--action-hover);
   box-shadow: var(--shadow-sm);
 }
 .il-button--primary:active {
-  background: var(--accent-active);
+  background: var(--action-active);
 }
 
 /* Secondary — muted surface */
@@ -560,13 +583,11 @@ h3 {
   border-bottom: 2px solid var(--border);
 }
 .il-prose h2 {
-  font-family: var(--font-heading);
-  font-size: 0.95rem;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
   font-weight: 700;
-  color: var(--accent-active);
+  color: var(--text);
   margin: 1.2rem 0 0.4rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 .il-prose p {
   margin: 0.3rem 0;
@@ -605,9 +626,7 @@ h3 {
   background: var(--surface-2);
   color: var(--text-muted);
   font-weight: 600;
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-size: var(--text-xs);
   border-bottom: 1px solid var(--border);
 }
 .il-prose td {

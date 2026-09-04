@@ -350,6 +350,15 @@ export interface UnmatchedConversation {
   starts_at: string;
   ends_at: string;
   correlation_status: string | null;
+  /** Why the recording was held — set when it may contain more than one client.
+   *  The cue that this row needs a SPLIT, not a client tag. */
+  correlation_hold_reason?: string | null;
+  /** Where the pre-computed split proposal is: 'pending' / 'processing' while it
+   *  runs, 'done' when ready to confirm, 'failed' / null otherwise. */
+  segmentation_status?: string | null;
+  /** How many sessions the ready proposal found. Null unless `segmentation_status`
+   *  is 'done'. */
+  segment_count?: number | null;
   transcript_preview: string;
 }
 
@@ -443,6 +452,8 @@ export interface UnmatchedDetail {
   starts_at: string;
   ends_at: string;
   correlation_status: string | null;
+  correlation_hold_reason?: string | null;
+  segmentation_status?: string | null;
   extraction_status: string | null;
   /** The whole recording, not the 240-char list preview. May be null (the
    *  recorder sent a session with no usable transcript — nothing to read, only

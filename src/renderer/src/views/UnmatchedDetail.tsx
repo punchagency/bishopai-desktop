@@ -349,6 +349,15 @@ export function UnmatchedDetail({ backendUrl, conversation, onClose, onMatched }
   // always something to read while the fetch is in flight.
   const transcript = detail?.transcript ?? (isSample ? conversation.transcript_preview : null);
 
+  const status = detail?.correlation_status ?? conversation.correlation_status;
+  const held = status === 'needs_review';
+  const holdReason = detail?.correlation_hold_reason ?? conversation.correlation_hold_reason ?? null;
+  const segStatus = detail?.segmentation_status ?? conversation.segmentation_status ?? null;
+  // The split proposal has already loaded into `segments` (from cache, instantly,
+  // for a held recording). Two or more means there's something to confirm.
+  const proposalReady = held && segments.length >= 2;
+  const proposalWorking = held && !proposalReady && (segStatus === 'pending' || segStatus === 'processing');
+
   return (
     <div className="il-detail">
       <header className="il-detail__head">
@@ -375,11 +384,31 @@ export function UnmatchedDetail({ backendUrl, conversation, onClose, onMatched }
             (or straight to a client if it was a walk-in). Assigning kicks off the same
             note extraction a matched session gets.
           </InfoPopover>
-          <Badge tone="warning">{humanize(conversation.correlation_status ?? 'unmatched')}</Badge>
+          <Badge tone="warning">{held ? 'Needs a split' : humanize(status ?? 'unmatched')}</Badge>
         </div>
       </header>
 
       <div className="il-detail__body">
+        {held && (
+          <div className="il-callout il-callout--check">
+            <p className="il-callout__title">
+              {proposalReady
+                ? `${segments.length} sessions detected in this recording`
+                : proposalWorking
+                  ? 'Working out where this recording splits…'
+                  : 'This recording may contain more than one client'}
+            </p>
+            {holdReason && <p className="il-callout__body">{holdReason}</p>}
+            <p className="il-callout__body">
+              {proposalReady
+                ? 'Review the proposed split below — each part goes to its own client and then extracts like any session.'
+                : proposalWorking
+                  ? 'The split will be ready to confirm in a moment. You can also split it by hand now.'
+                  : 'Split it into one session per client before it can be turned into notes.'}
+            </p>
+          </div>
+        )}
+
         <dl className="il-meta">
           <div className="il-meta__row">
             <dt>Recorded</dt>
@@ -421,15 +450,40 @@ export function UnmatchedDetail({ backendUrl, conversation, onClose, onMatched }
         )}
       </div>
 
-      {/* Sticky, so the assign action stays reachable however long the transcript runs. */}
+      {/* Sticky, so the next action stays reachable however long the transcript runs.
+          For a held recording the split is the job, so it leads. */}
       <footer className="il-detail__actions">
-        <Button variant="secondary" onClick={() => setSplitting(true)} disabled={isSample} title="Split a recording containing multiple client sessions" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
-          <IconScissors size={14} />
-          Split multi-session recording
-        </Button>
-        <Button variant="primary" onClick={() => setMatching(true)} disabled={isSample}>
-          Assign this recording
-        </Button>
+        {proposalReady ? (
+          <>
+            <Button variant="secondary" onClick={() => setMatching(true)} disabled={isSample} title="Treat the whole recording as one client's session">
+              Assign as one session
+            </Button>
+            <Button variant="primary" onClick={() => setSplitting(true)} disabled={isSample} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+              <IconScissors size={14} />
+              Review split · {segments.length} sessions
+            </Button>
+          </>
+        ) : proposalWorking ? (
+          <>
+            <Button variant="secondary" onClick={() => setMatching(true)} disabled={isSample}>
+              Assign as one session
+            </Button>
+            <Button variant="primary" onClick={() => setSplitting(true)} disabled={isSample} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+              <IconScissors size={14} />
+              Split by hand
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button variant="secondary" onClick={() => setSplitting(true)} disabled={isSample} title="Split a recording containing multiple client sessions" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+              <IconScissors size={14} />
+              Split multi-session recording
+            </Button>
+            <Button variant="primary" onClick={() => setMatching(true)} disabled={isSample}>
+              Assign this recording
+            </Button>
+          </>
+        )}
       </footer>
 
       {matching && (
