@@ -6,11 +6,11 @@
 
 // What a website build talks to when there's no Electron config to read.
 // VITE_BACKEND_URL is baked in at `npm run build:web` time (see .env.web);
-// the Railway URL matches innerlume.config.json's own default so an
+// the Render URL matches innerlume.config.json's own default so an
 // unconfigured build still points somewhere real instead of localhost.
 const WEB_DEFAULT_BACKEND =
   (import.meta.env.VITE_BACKEND_URL as string | undefined) ||
-  'https://innerlume-server-production.up.railway.app';
+  'https://innerlume-api.onrender.com';
 
 /**
  * Which backend this dashboard talks to.
